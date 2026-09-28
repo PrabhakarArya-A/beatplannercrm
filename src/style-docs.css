@@ -1,0 +1,371 @@
+/* ============================================================
+   Docs viewer
+   A tool page, not a prototype screen — so it wears its own light
+   chrome rather than the CRM sidebar, which would put a "Docs" item
+   in every other page's navigation.
+   ============================================================ */
+:root {
+  --dv-bg:      #eef1f9;
+  --dv-card:    #ffffff;
+  --dv-heading: #202123;
+  --dv-base:    #313949;
+  --dv-para:    #434d5e;
+  --dv-label:   #616e88;
+  --dv-border:  #dcdbee;
+  --dv-rule:    #edf0f4;
+  --dv-link:    #5464f2;
+  --dv-soft:    #f8faff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Zoho Puvi', 'Puvi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--dv-base);
+  background: var(--dv-bg);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ─────────────────────────────────────────── */
+.dv-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--dv-card);
+  border-bottom: 1px solid var(--dv-border);
+}
+
+.dv-back {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--dv-base);
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.dv-back:hover { background: #eef0f8; }
+
+.dv-brand { font-size: 16px; font-weight: 600; color: var(--dv-heading); }
+.dv-brand span { font-weight: 400; color: var(--dv-label); }
+
+.dv-search {
+  position: relative;
+  margin-left: auto;
+  width: 280px;
+}
+
+.dv-search i {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--dv-label);
+}
+
+.dv-search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px 0 32px;
+  background: var(--dv-card);
+  border: 1px solid #c0c8e2;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--dv-base);
+  outline: none;
+}
+
+.dv-search input:focus { border-color: var(--dv-link); }
+
+.dv-count { font-size: 13px; color: var(--dv-label); white-space: nowrap; }
+
+/* ── Panes ───────────────────────────────────────────── */
+.dv-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.dv-list {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dv-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--dv-card);
+  border: 1px solid var(--dv-border);
+  border-radius: 10px;
+}
+
+.dv-toc {
+  width: 210px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+/* The table of contents is a convenience, not the content */
+@media (max-width: 1200px) { .dv-toc { display: none; } }
+@media (max-width: 900px) {
+  .dv-body { flex-direction: column; }
+  .dv-list { width: auto; max-height: 180px; }
+}
+
+/* ── Document list ───────────────────────────────────── */
+/* Titles only. Everything else about a document is in its header once
+   it is open, so the list stays a list. */
+.dv-item {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--dv-card);
+  border: 1px solid var(--dv-border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--dv-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dv-item:hover { border-color: #c3cdf0; }
+
+.dv-item.active {
+  border-color: var(--dv-link);
+  box-shadow: inset 0 0 0 1px var(--dv-link);
+  background: var(--dv-soft);
+  font-weight: 600;
+  color: var(--dv-heading);
+}
+
+.dv-empty {
+  padding: 24px 14px;
+  font-size: 14px;
+  color: var(--dv-label);
+  text-align: center;
+}
+
+/* ── Document header ─────────────────────────────────── */
+.dv-doc-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 30px 14px;
+  background: var(--dv-card);
+  border-bottom: 1px solid var(--dv-rule);
+  border-radius: 10px 10px 0 0;
+}
+
+.dv-doc-head[hidden] { display: none; }
+
+.dv-doc-head h2 { font-size: 19px; font-weight: 600; line-height: 26px; color: var(--dv-heading); }
+
+.dv-doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.dv-file { color: var(--dv-label); }
+
+/* The freshness of a living spec is worth more than its filename */
+.dv-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  background: var(--dv-soft);
+  border: 1px solid var(--dv-border);
+  border-radius: 100px;
+  font-weight: 500;
+  color: var(--dv-base);
+}
+
+.dv-updated i { font-size: 13px; color: var(--dv-link); }
+
+.dv-raw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #d5d8e9;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dv-base);
+  text-decoration: none;
+}
+
+.dv-raw:hover { background: #f5f6fb; }
+
+/* ── Table of contents ───────────────────────────────── */
+.dv-toc-title {
+  padding: 0 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8c91ab;
+}
+
+.dv-toc a {
+  display: block;
+  padding: 5px 10px;
+  border-left: 2px solid transparent;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--dv-label);
+  text-decoration: none;
+}
+
+.dv-toc a:hover { color: var(--dv-base); }
+
+.dv-toc a.here {
+  border-left-color: var(--dv-link);
+  color: var(--dv-link);
+  font-weight: 500;
+}
+
+/* ── Rendered markdown ───────────────────────────────── */
+.dv-doc { padding: 22px 30px 60px; max-width: 900px; }
+
+.markdown { font-size: 14px; line-height: 22px; color: var(--dv-para); }
+
+.markdown h2 {
+  margin: 34px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--dv-rule);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--dv-heading);
+}
+
+.markdown h2:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
+.markdown h3 {
+  margin: 24px 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dv-heading);
+}
+
+.markdown h4 {
+  margin: 18px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dv-base);
+}
+
+.markdown p { margin: 10px 0; }
+
+.markdown ul, .markdown ol { margin: 10px 0 10px 22px; }
+.markdown li { margin: 5px 0; }
+
+.markdown a { color: var(--dv-link); }
+
+.markdown strong { font-weight: 600; color: var(--dv-base); }
+
+.markdown code {
+  padding: 1px 5px;
+  background: #f2f4fb;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: #3d4a6b;
+}
+
+.markdown pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  background: #f8faff;
+  border: 1px solid var(--dv-border);
+  border-radius: 8px;
+  line-height: 19px;
+}
+
+.markdown pre code { padding: 0; background: none; font-size: 12px; }
+
+.markdown blockquote {
+  margin: 14px 0;
+  padding: 10px 16px;
+  background: #fffdf2;
+  border-left: 3px solid #eda114;
+  border-radius: 0 6px 6px 0;
+  color: var(--dv-base);
+}
+
+.markdown blockquote p:first-child { margin-top: 0; }
+.markdown blockquote p:last-child { margin-bottom: 0; }
+
+.markdown hr { margin: 28px 0; border: none; border-top: 1px solid var(--dv-rule); }
+
+/* Tables carry most of the meaning in these specs, so they get room */
+.markdown table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  border: 1px solid var(--dv-border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.markdown thead { background: var(--dv-soft); }
+
+.markdown th {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--dv-border);
+  font-weight: 600;
+  color: var(--dv-heading);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown td {
+  padding: 9px 12px;
+  border-top: 1px solid var(--dv-rule);
+  vertical-align: top;
+}
+
+.markdown tbody tr:hover { background: #fafbff; }
+
+/* Checklists read as checklists, not as bulleted boxes */
+.markdown input[type="checkbox"] {
+  margin-right: 7px;
+  vertical-align: -1px;
+  accent-color: var(--dv-link);
+}
+
+.markdown li:has(> input[type="checkbox"]) { list-style: none; margin-left: -18px; }
