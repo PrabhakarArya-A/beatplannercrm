@@ -1,4 +1,25 @@
 class FieldMap {
+  /* Terrain palettes. `map` is exactly what this map has always drawn, and
+     it is the default, so nothing changes anywhere until a map is asked for
+     another one. */
+  static TERRAINS = {
+    map: {
+      label: 'Map',
+      bg: '#e8e0d4', block: '#f5f0e8', blockEdge: '#d4cdc0',
+      water: '#93c5fd', road: '#ffffff', roadEdge: '#e5e0d8',
+    },
+    satellite: {
+      label: 'Satellite',
+      bg: '#3d4a38', block: '#49573f', blockEdge: '#5b6a4f',
+      water: '#1e3c5c', road: '#8d9683', roadEdge: '#6d7864',
+    },
+    terrain: {
+      label: 'Terrain',
+      bg: '#dfe7d6', block: '#eef2e6', blockEdge: '#c3cfb4',
+      water: '#9ec9e8', road: '#ffffff', roadEdge: '#d2dcc6',
+    },
+  };
+
   constructor(canvasId, areaId) {
     this.canvas = document.getElementById(canvasId);
     this.ctx    = this.canvas.getContext('2d');
@@ -14,6 +35,13 @@ class FieldMap {
     this.animFrame = null;
 
     this.activeModule = 'all';
+    this.terrain = 'map';
+
+    /* True on a map that has the screen to itself — one in a sheet or a
+       modal, with no page behind it to scroll. Such a map takes the wheel
+       and a single finger for itself, the way a full map should. An
+       embedded one leaves both to the page; see takeGestures(). */
+    this.ownsGestures = false;
 
     /* pin bounce: Map<pin object → animation start timestamp> */
     this._bouncingPins  = new Map();
@@ -166,9 +194,46 @@ class FieldMap {
     ctx.restore();
   }
 
+  /* Call on a map that fills a sheet or modal: the wheel zooms with no
+     modifier and one finger pans, because there is nothing behind it that
+     either gesture could belong to instead. */
+  takeGestures() {
+    this.ownsGestures = true;
+    this.canvas.classList.add('fm-owns-gestures');
+    return this;
+  }
+
+  get palette() { return FieldMap.TERRAINS[this.terrain] || FieldMap.TERRAINS.map; }
+
+  setTerrain(name) {
+    if (!FieldMap.TERRAINS[name] || name === this.terrain) return;
+    this.terrain = name;
+    this.draw();
+  }
+
+  /* Centre and scale so every one of these world points is in view —
+     what the map's "back to the day" control asks for. */
+  fitBounds(points, pad = 70) {
+    if (!points || !points.length) return;
+    const w = this.canvas.width - pad * 2;
+    const h = this.canvas.height - pad * 2;
+    if (w <= 0 || h <= 0) return;
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const spanX = Math.max(maxX - minX, 1);
+    const spanY = Math.max(maxY - minY, 1);
+    this.scale = Math.max(0.4, Math.min(5, Math.min(w / spanX, h / spanY)));
+    this.panX = this.canvas.width / 2 - ((minX + maxX) / 2) * this.scale;
+    this.panY = this.canvas.height / 2 - ((minY + maxY) / 2) * this.scale;
+    this._clamp();
+    this.draw();
+  }
+
   _drawBackground() {
     const { ctx, canvas } = this;
-    ctx.fillStyle = '#e8e0d4';
+    ctx.fillStyle = this.palette.bg;
     ctx.fillRect(-this.panX / this.scale, -this.panY / this.scale,
                   canvas.width / this.scale, canvas.height / this.scale);
   }
@@ -176,7 +241,7 @@ class FieldMap {
   _drawBlocks() {
     const { ctx } = this;
     BLOCKS.forEach(b => {
-      ctx.fillStyle = '#f5f0e8'; ctx.strokeStyle = '#d4cdc0';
+      ctx.fillStyle = this.palette.block; ctx.strokeStyle = this.palette.blockEdge;
       ctx.lineWidth = 0.5 / this.scale;
       ctx.beginPath(); ctx.rect(b.x, b.y, b.w, b.h); ctx.fill(); ctx.stroke();
     });
@@ -187,7 +252,7 @@ class FieldMap {
     WATER.forEach(poly => {
       ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]);
       poly.slice(1).forEach(p => ctx.lineTo(p[0], p[1]));
-      ctx.closePath(); ctx.fillStyle = '#93c5fd'; ctx.fill();
+      ctx.closePath(); ctx.fillStyle = this.palette.water; ctx.fill();
     });
   }
 
@@ -196,8 +261,8 @@ class FieldMap {
     ROADS.forEach(r => {
       ctx.beginPath(); ctx.moveTo(r.path[0][0], r.path[0][1]);
       r.path.slice(1).forEach(p => ctx.lineTo(p[0], p[1]));
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = (r.w || 3) / this.scale; ctx.stroke();
-      ctx.strokeStyle = '#e5e0d8'; ctx.lineWidth = 0.5 / this.scale; ctx.stroke();
+      ctx.strokeStyle = this.palette.road; ctx.lineWidth = (r.w || 3) / this.scale; ctx.stroke();
+      ctx.strokeStyle = this.palette.roadEdge; ctx.lineWidth = 0.5 / this.scale; ctx.stroke();
     });
   }
 
@@ -317,42 +382,162 @@ class FieldMap {
     this.animFrame = requestAnimationFrame(() => this.draw());
   }
 
+  /* A few pixels of travel during a click is a click, not a pan */
+  static DRAG_SLOP = 3;
+
   _bindEvents() {
     const canvas = this.canvas;
+    FieldMap._installStyles();
+    canvas.classList.add('fm-canvas');
+
+    const endDrag = () => {
+      /* The click that follows a real drag is the end of a pan, not a click
+         on whatever happens to be under the pointer */
+      this.didDrag = this.dragMoved;
+      this.isDragging = false;
+      this.dragMoved = false;
+      canvas.classList.remove('dragging');
+    };
 
     canvas.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
       this.isDragging = true;
+      this.dragMoved = false;
+      /* Cleared on the way in, not just on the way out: a fresh press has
+         not dragged anything yet, and leaving the last press's verdict
+         standing made every later click look like the end of a pan. */
+      this.didDrag = false;
       this.lastX = e.clientX; this.lastY = e.clientY;
-      canvas.classList.add('dragging');
+      /* Or the drag selects the text around the map as it goes */
+      e.preventDefault();
     });
-    window.addEventListener('mouseup', () => {
-      this.isDragging = false;
-      canvas.classList.remove('dragging');
-    });
+
+    window.addEventListener('mouseup', endDrag);
+
     window.addEventListener('mousemove', e => {
-      if (this.isDragging) {
-        this.pan(e.clientX - this.lastX, e.clientY - this.lastY);
-        this.lastX = e.clientX; this.lastY = e.clientY;
+      if (!this.isDragging) return;
+      /* A button released outside the window never sends us its mouseup,
+         which used to leave the map panning with nothing held down */
+      if (e.buttons === 0) { endDrag(); return; }
+      const dx = e.clientX - this.lastX;
+      const dy = e.clientY - this.lastY;
+      if (!this.dragMoved) {
+        if (Math.abs(dx) < FieldMap.DRAG_SLOP && Math.abs(dy) < FieldMap.DRAG_SLOP) return;
+        this.dragMoved = true;
+        canvas.classList.add('dragging');
       }
+      this.pan(dx, dy);
+      this.lastX = e.clientX; this.lastY = e.clientY;
     });
+
+    /* An embedded map leaves a bare wheel to the page and zooms only on
+       Ctrl / ⌘, so the record scrolls as it would over anything else — this
+       map used to swallow every wheel. A map that owns its gestures zooms
+       on a bare wheel, there being no page behind it to scroll. Either way
+       a trackpad pinch arrives as a wheel with ctrlKey already set, so
+       pinch to zoom needs nothing extra. */
     canvas.addEventListener('wheel', e => {
+      if (!this.ownsGestures && !e.ctrlKey && !e.metaKey) { this._hintZoom(); return; }
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       this.zoom(e.deltaY > 0 ? 0.85 : 1.18, e.clientX - rect.left, e.clientY - rect.top);
     }, { passive: false });
+
+    /* On an embedded map one finger scrolls the page — see touch-action on
+       .fm-canvas — and two pan the map, tracked by the midpoint between
+       them. Before this a one-finger swipe dragged the map and scrolled the
+       record at once. A map that owns its gestures pans on one finger too. */
+    const point = touches => (touches.length === 2
+      ? { x: (touches[0].clientX + touches[1].clientX) / 2,
+          y: (touches[0].clientY + touches[1].clientY) / 2 }
+      : { x: touches[0].clientX, y: touches[0].clientY });
+
+    const panningTouch = n => n === 2 || (n === 1 && this.ownsGestures);
+
     canvas.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        this.isDragging = true;
-        this.lastX = e.touches[0].clientX; this.lastY = e.touches[0].clientY;
-      }
+      if (!panningTouch(e.touches.length)) { this.isDragging = false; return; }
+      const m = point(e.touches);
+      this.isDragging = true;
+      this.dragMoved = true;
+      this.lastX = m.x; this.lastY = m.y;
     }, { passive: true });
+
     canvas.addEventListener('touchmove', e => {
-      if (this.isDragging && e.touches.length === 1) {
-        this.pan(e.touches[0].clientX - this.lastX, e.touches[0].clientY - this.lastY);
-        this.lastX = e.touches[0].clientX; this.lastY = e.touches[0].clientY;
+      if (!this.isDragging || !panningTouch(e.touches.length)) return;
+      e.preventDefault();
+      const m = point(e.touches);
+      this.pan(m.x - this.lastX, m.y - this.lastY);
+      this.lastX = m.x; this.lastY = m.y;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', endDrag);
+    canvas.addEventListener('touchcancel', endDrag);
+  }
+
+  /* Says why the wheel did nothing, the one time it does nothing. Shown on
+     a bare wheel and gone again shortly after. */
+  _hintZoom() {
+    if (!this.area) return;
+    if (!this._hintEl) {
+      this._hintEl = document.createElement('p');
+      this._hintEl.className = 'fm-zoom-hint';
+      this._hintEl.setAttribute('aria-hidden', 'true');
+      this._hintEl.textContent =
+        `Use ${FieldMap._cmdKey()} + scroll to zoom the map`;
+      this.area.appendChild(this._hintEl);
+    }
+    this._hintEl.classList.add('show');
+    clearTimeout(this._hintTimer);
+    this._hintTimer = setTimeout(() => this._hintEl.classList.remove('show'), 1400);
+  }
+
+  static _cmdKey() {
+    return /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent)
+      ? '\u2318' : 'Ctrl';
+  }
+
+  /* The touch rules and the hint belong to the map wherever it is used, and
+     the pages that use it load four different stylesheets — so the
+     component brings its own, once. */
+  static _installStyles() {
+    if (document.getElementById('fm-styles')) return;
+    const el = document.createElement('style');
+    el.id = 'fm-styles';
+    el.textContent = `
+      /* One finger is the page's: a swipe scrolls the record rather than
+         dragging the map out from under it. Two fingers are the map's. */
+      .fm-canvas { touch-action: pan-y; }
+
+      /* Unless the map owns its gestures, in which case every touch is its
+         own — there is no page behind it to scroll */
+      .fm-canvas.fm-owns-gestures { touch-action: none; }
+
+      .fm-zoom-hint {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        z-index: 3;
+        transform: translate(-50%, 6px);
+        padding: 7px 14px;
+        background: rgba(32, 33, 35, 0.86);
+        border-radius: 100px;
+        font-family: inherit;
+        font-size: 12.5px;
+        line-height: 17px;
+        color: #fff;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.18s ease, transform 0.18s ease;
       }
-    }, { passive: true });
-    canvas.addEventListener('touchend', () => { this.isDragging = false; });
+
+      .fm-zoom-hint.show { opacity: 1; transform: translate(-50%, 0); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fm-zoom-hint { transition: none; }
+      }
+    `;
+    document.head.appendChild(el);
   }
 
   _observeResize() {

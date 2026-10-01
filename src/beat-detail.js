@@ -91,6 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const bandText = $('bd-band-text');
   const toastEl  = $('bd-toast');
   const dayAction = $('bd-day-action');
+  const sheetScrim = $('bd-sheet-scrim');
+
+  /* The full-map sheet's own map, built the first time the sheet opens */
+  let sheetMap = null;
 
   const escape = s => String(s).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -281,8 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
     band.hidden = true;
   }
 
-  /* The one thing the rep is here to do, named after the day it acts on so
-     they never have to hunt down the row first */
+  /* The one thing the rep is here to do, in the record header in both
+     layouts, named after the day it acts on so they never have to hunt
+     down the row first. Only ever one day is actionable, so there is only
+     ever one button. */
   function renderDayAction() {
     const running = activeIndex();
     if (running !== -1) {
@@ -316,6 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDayAction();
     renderBand();
     if (window.bdMap) { window.bdMap._activeBeatDay = selectedDay; window.bdMap.draw(); }
+    /* The sheet shows the same day, so it follows the same changes */
+    if (sheetMap && !sheetScrim.hidden) {
+      sheetMap._activeBeatDay = selectedDay;
+      sheetMap.draw();
+    }
   }
 
   function toast(message) {
@@ -365,8 +376,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* Acting from the toolbar means the day the rep just opened may be far
-     down the list, so bring it to them */
+     down the list, so bring it to them.
+
+     Not in a related list, though: there the button is on the day row, so
+     the day is already under the rep's finger — and scrollIntoView moves
+     every scrollable ancestor it has, which now includes the page column,
+     carrying the card's own header off the top of the screen. */
   function revealDay(i) {
+    if (document.body.classList.contains('bd-in-list')) return;
     const el = daysEl.querySelector(`.bd-day[data-day="${i}"]`);
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -588,18 +605,41 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ── Route map ─────────────────────────────────────── */
-  const fieldMap = new FieldMap('map-canvas', 'map-area');
-  window.bdMap = fieldMap;
-
   const BEAT_HOME   = { x: 250, y: 590 };
   const BEAT_OFFICE = { x: 700, y: 560 };
 
+  /* Everything that makes a plain FieldMap draw *this beat*. Factored out
+     because there are two of them now — the one in the card and the one in
+     the full-map sheet — and they must draw the day identically. */
+  function configureBeatMap(fieldMap) {
   fieldMap._beatDays      = DAYS.map(d => ({ visits: d.pins }));
   fieldMap._beatHome      = BEAT_HOME;
   fieldMap._beatOffice    = BEAT_OFFICE;
   fieldMap._activeBeatDay = 0;
 
+  /* The canvas's backing store has to match its box, and the box changes
+     for reasons no single event reports: switching layout, the card
+     opening, the window or the embedding pane being dragged. Checking it
+     as part of drawing keeps the two in step wherever the change came
+     from, and costs two offset reads on a frame that was going to lay the
+     map out anyway. */
+  fieldMap.fit = function () {
+    /* clientWidth, not offsetWidth: the sheet's map box carries a 1px
+       border, and the canvas fills the content box inside it — measuring
+       the border box made the backing store 2px bigger than the element
+       and the whole map drew very slightly stretched. */
+    const w = this.area.clientWidth, h = this.area.clientHeight;
+    if (!w || !h || (this.canvas.width === w && this.canvas.height === h)) return false;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.scale = 0.65;
+    this.panX = w / 2 - 450 * this.scale;
+    this.panY = h / 2 - 390 * this.scale;
+    return true;
+  };
+
   fieldMap.draw = function () {
+    this.fit();
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -657,20 +697,86 @@ document.addEventListener('DOMContentLoaded', () => {
     this._drawSinglePin(this._beatOffice.x, this._beatOffice.y, '#ef4444', 0, false);
   };
 
-  fieldMap.resize = function () {
-    this.canvas.width  = this.area.offsetWidth;
-    this.canvas.height = this.area.offsetHeight;
-    this.scale = 0.65;
-    this.panX  = this.canvas.width  / 2 - 450 * this.scale;
-    this.panY  = this.canvas.height / 2 - 390 * this.scale;
-    this.draw();
-  };
+  fieldMap.resize = function () { this.fit(); this.draw(); };
+  return fieldMap;
+  }
+
+  /* ── Picking a day off the map ──────────────────────── */
+  /* The days a rep is not on are drawn dashed and grey behind the one they
+     are. Clicking one of those routes moves the whole view onto that day —
+     the timeline, the card's map and the sheet's, because all three draw
+     from selectedDay. */
+  function distToSegment(px, py, a, b) {
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len = vx * vx + vy * vy;
+    let t = len ? ((px - a.x) * vx + (py - a.y) * vy) / len : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (a.x + t * vx), py - (a.y + t * vy));
+  }
+
+  /* Which day a point landed on, or -1. Stops are tested before the lines
+     between them, so a pin always wins over a route passing behind it. The
+     tolerances are in screen pixels, hence the division by scale. */
+  function dayAt(map, mx, my) {
+    const [wx, wy] = map.screenToWorld(mx, my);
+    let hit = -1, best = Infinity;
+
+    const pinTol = 15 / map.scale;
+    DAYS.forEach((day, i) => day.pins.forEach(p => {
+      const d = Math.hypot(p.x - wx, p.y - wy);
+      if (d <= pinTol && d < best) { best = d; hit = i; }
+    }));
+    if (hit !== -1) return hit;
+
+    const lineTol = 10 / map.scale;
+    DAYS.forEach((day, i) => {
+      const pts = [BEAT_HOME, ...day.pins, BEAT_OFFICE];
+      for (let k = 1; k < pts.length; k++) {
+        const d = distToSegment(wx, wy, pts[k - 1], pts[k]);
+        if (d <= lineTol && d < best) { best = d; hit = i; }
+      }
+    });
+    return hit;
+  }
+
+  function bindDayPicking(map) {
+    const at = e => {
+      const r = map.canvas.getBoundingClientRect();
+      return dayAt(map, e.clientX - r.left, e.clientY - r.top);
+    };
+
+    map.canvas.addEventListener('click', e => {
+      if (map.didDrag) return;
+      const i = at(e);
+      if (i === -1 || i === selectedDay) return;
+      selectedDay = i;
+      expanded = true;
+      render();
+    });
+
+    /* So the routes read as something you can click */
+    map.canvas.addEventListener('mousemove', e => {
+      if (map.isDragging) return;
+      map.canvas.classList.toggle('bd-over-route', at(e) !== -1);
+    });
+    map.canvas.addEventListener('mouseleave', () => {
+      map.canvas.classList.remove('bd-over-route');
+    });
+  }
+
+  const fieldMap = configureBeatMap(new FieldMap('map-canvas', 'map-area'));
+  window.bdMap = fieldMap;
+  bindDayPicking(fieldMap);
   fieldMap.resize();
 
+  /* A resized window changes either map's box */
+  window.addEventListener('resize', () => {
+    fieldMap.resize();
+    if (sheetMap) sheetMap.resize();
+  });
+
   /* ── Layout toggle ─────────────────────────────────── */
-  /* Only the arrangement changes; every behaviour above is shared. The
-     map is a canvas sized to its box, so it has to be re-measured once
-     the grid has settled into the new columns. */
+  /* Only the arrangement changes; every behaviour above is shared. */
   const content = $('bd-content');
   const LAYOUT_KEY = 'bd-layout';
 
@@ -679,8 +785,14 @@ document.addEventListener('DOMContentLoaded', () => {
     content.classList.toggle('type-2', type === '2');
     document.querySelectorAll('.bd-layout-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.layout === type));
+    /* Reaches the toolbar button, which sits outside .bp-content */
+    document.body.classList.toggle('bd-in-list', type === '2');
     try { localStorage.setItem(LAYOUT_KEY, type); } catch { /* private mode */ }
-    requestAnimationFrame(() => fieldMap.resize());
+    render();   /* the action moves between the toolbar and the day rows */
+    /* Flush the new arrangement, then fit the canvas to it */
+    void content.offsetWidth;
+    fieldMap.resize();
+    if (window.bdMarkRail) window.bdMarkRail();   /* the column's travel changed */
   }
 
   document.querySelector('.bd-layout').addEventListener('click', e => {
@@ -692,25 +804,159 @@ document.addEventListener('DOMContentLoaded', () => {
   try { savedLayout = localStorage.getItem(LAYOUT_KEY) || '1'; } catch { /* private mode */ }
   setLayout(savedLayout);
 
-  /* A resized window changes the map's box too */
-  window.addEventListener('resize', () => fieldMap.resize());
 
-  /* ── The related lists (Type 2) ────────────────────── */
-  /* Beat Detail View arrives closed, the way a related list sits on a CRM
-     record; Notes arrives open so its box is visible. The whole header is
-     the hit area, not just the chevron. The map canvas has no box while
-     the detail body is hidden, so it is re-measured on the way open, once
-     the grid has settled. */
-  document.querySelectorAll('.bd-related-head').forEach(head => {
-    head.addEventListener('click', () => {
-      const card = head.closest('.bd-related');
-      const btn = head.querySelector('.bd-related-toggle');
-      const name = head.querySelector('h2').textContent;
-      const open = !card.classList.toggle('collapsed');
-      btn.setAttribute('aria-expanded', String(open));
-      btn.setAttribute('aria-label', `${open ? 'Collapse' : 'Expand'} ${name}`);
-      if (open) requestAnimationFrame(() => fieldMap.resize());
-    });
+  /* ── The related-list rail (Type 2) ────────────────── */
+  /* The related lists carry no expand/collapse of their own — this rail is
+     what moves between them. Closed on arrival; the toggle beside the tab
+     pill opens it, and an item brings its card to the top of the column.
+     The highlight follows the column as it scrolls, so the rail always says
+     where the reader is. */
+  const rail = $('bd-rlist');
+  const railToggle = $('bd-rlist-toggle');
+  const railItems = [...rail.querySelectorAll('.bd-rlist-item')];
+
+  railToggle.addEventListener('click', () => {
+    const open = document.body.classList.toggle('bd-rlist-open');
+    railToggle.setAttribute('aria-expanded', String(open));
+    railToggle.setAttribute('aria-label', `${open ? 'Hide' : 'Show'} related list`);
+    /* The column just changed width, and the map canvas with it. Reading a
+       layout property flushes the new width, so the canvas can be fitted
+       here and now rather than from a frame that may never be scheduled. */
+    void content.offsetWidth;
+    fieldMap.resize();
+  });
+
+  rail.addEventListener('click', e => {
+    const item = e.target.closest('.bd-rlist-item');
+    if (!item) return;
+    const card = $(item.dataset.target);
+    if (!card) return;
+    /* Relative, not card.offsetTop: the cards' offsetParent is the page,
+       not the scrolling column. Assigning scrollTop rather than asking for
+       behavior: 'smooth' — the column carries scroll-behavior in CSS, which
+       animates where it can and lands the jump where it cannot. */
+    content.scrollTop += card.getBoundingClientRect().top - content.getBoundingClientRect().top;
+    /* Light the item up from the click rather than waiting for the scroll
+       it causes: the glide takes a moment, and the last card can only come
+       part of the way up when the column runs out of travel */
+    railItems.forEach(i => i.classList.toggle('active', i === item));
+  });
+
+  /* The last card whose top has passed the top of the column is the one
+     being read — except at the very bottom, where the last card may never
+     reach the top and is nonetheless what the reader is looking at. */
+  function markRail() {
+    /* Only meaningful when there is travel to be at the end of — with
+       nothing to scroll, every card is on screen and the first one leads */
+    const travel = content.scrollHeight - content.clientHeight;
+    const atEnd = travel > 2 && content.scrollTop >= travel - 2;
+    let current = atEnd ? railItems[railItems.length - 1] : railItems[0];
+    if (!atEnd) {
+      const edge = content.getBoundingClientRect().top + 8;
+      railItems.forEach(item => {
+        const card = $(item.dataset.target);
+        if (card && card.getBoundingClientRect().top <= edge) current = item;
+      });
+    }
+    railItems.forEach(item => item.classList.toggle('active', item === current));
+  }
+
+  content.addEventListener('scroll', markRail);
+  /* setLayout() is defined above this point and has to reach it */
+  window.bdMarkRail = markRail;
+  markRail();
+
+  /* ── Full map side sheet (Figma 5544:1008720) ───────── */
+  /* A second map rather than the card's one moved across: both are built by
+     configureBeatMap, so the sheet draws exactly what the card does at the
+     size it actually has, and the card keeps its canvas. Built on first
+     open — a sheet nobody opens costs nothing. */
+  const terrainBtn  = $('bd-terrain');
+  const terrainMenu = $('bd-terrain-menu');
+  const sheetClose  = $('bd-sheet-close');
+
+  /* The day the map answers for: the one running, else the one selected */
+  const dayInView = () => (activeIndex() !== -1 ? activeIndex() : selectedDay);
+
+  const dayPoints = i =>
+    [BEAT_HOME, ...(DAYS[i] ? DAYS[i].pins : []), BEAT_OFFICE];
+
+  /* The thumbnail previews whichever terrain is in use */
+  function paintTerrain() {
+    const name = sheetMap ? sheetMap.terrain : 'map';
+    terrainBtn.style.background = FieldMap.TERRAINS[name].bg;
+    terrainMenu.querySelectorAll('.bd-terrain-opt').forEach(opt =>
+      opt.classList.toggle('active', opt.dataset.terrain === name));
+  }
+
+  function openSheet() {
+    sheetScrim.hidden = false;
+    if (!sheetMap) {
+      /* It fills the sheet, so the wheel and a single finger are its own */
+      sheetMap = configureBeatMap(
+        new FieldMap('bd-sheet-canvas', 'bd-sheet-map').takeGestures());
+      bindDayPicking(sheetMap);
+    }
+    const day = dayInView();
+    sheetMap._activeBeatDay = day;
+    /* It was display:none a moment ago, so flush the layout before the
+       canvas is measured against its new box */
+    void sheetScrim.offsetWidth;
+    sheetMap.resize();
+    sheetMap.fitBounds(dayPoints(day));
+    paintTerrain();
+    sheetClose.focus();
+  }
+
+  function closeSheet() {
+    sheetScrim.hidden = true;
+    terrainMenu.hidden = true;
+    terrainBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  document.querySelectorAll('.bd-open-map').forEach(link => {
+    link.addEventListener('click', e => { e.preventDefault(); openSheet(); });
+  });
+
+  sheetClose.addEventListener('click', closeSheet);
+  sheetScrim.addEventListener('click', e => {
+    if (e.target === sheetScrim) closeSheet();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !sheetScrim.hidden) closeSheet();
+  });
+
+  /* Zoom from the middle of the canvas, which is what the buttons imply */
+  const ZOOM_STEP = 1.3;
+  function zoomSheet(factor) {
+    if (!sheetMap) return;
+    sheetMap.zoom(factor, sheetMap.canvas.width / 2, sheetMap.canvas.height / 2);
+  }
+  $('bd-map-zoom-in').addEventListener('click', () => zoomSheet(ZOOM_STEP));
+  $('bd-map-zoom-out').addEventListener('click', () => zoomSheet(1 / ZOOM_STEP));
+
+  /* "Current location" is the day in hand for now — where the rep actually
+     is is not something this prototype knows */
+  $('bd-map-locate').addEventListener('click', () => {
+    if (!sheetMap) return;
+    const day = dayInView();
+    sheetMap._activeBeatDay = day;
+    sheetMap.fitBounds(dayPoints(day));
+  });
+
+  terrainBtn.addEventListener('click', () => {
+    const open = terrainMenu.hidden;
+    terrainMenu.hidden = !open;
+    terrainBtn.setAttribute('aria-expanded', String(open));
+  });
+
+  terrainMenu.addEventListener('click', e => {
+    const opt = e.target.closest('.bd-terrain-opt');
+    if (!opt || !sheetMap) return;
+    sheetMap.setTerrain(opt.dataset.terrain);
+    paintTerrain();
+    terrainMenu.hidden = true;
+    terrainBtn.setAttribute('aria-expanded', 'false');
   });
 
   document.querySelectorAll('.bp-tabs .bp-tab').forEach(tab => {

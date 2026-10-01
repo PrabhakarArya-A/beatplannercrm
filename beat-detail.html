@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="src/sidebar.css" />
   <link rel="stylesheet" href="src/topbar.css" />
   <link rel="stylesheet" href="src/style-bottom-up.css" />
+  <link rel="stylesheet" href="src/map-controls.css" />
   <link rel="stylesheet" href="src/style-beat-detail.css" />
 </head>
 <body>
@@ -66,13 +67,34 @@
         <span id="bd-band-text"></span>
       </div>
 
-      <div class="bp-tabs">
-        <button class="bp-tab active">Overview</button>
-        <button class="bp-tab">Timeline</button>
+      <!-- Type 2 only: the record's related-list rail, and the toggle that
+           shows it. On a CRM record this rail is what moves between a
+           record's lists, which is why the cards themselves carry no
+           expand/collapse. It stands beside the tab row, not under it, so
+           it reads as part of the record's chrome. -->
+      <div class="bd-shell">
+      <nav class="bd-rlist" id="bd-rlist" aria-label="Related list">
+        <p class="bd-rlist-title">Related List</p>
+        <button class="bd-rlist-item active" type="button" data-target="bd-card-details">Beat Details</button>
+        <button class="bd-rlist-item" type="button" data-target="bd-related">Beat Detail View</button>
+        <button class="bd-rlist-item" type="button" data-target="bd-notes">Notes</button>
+      </nav>
+
+      <div class="bd-col">
+      <div class="bd-tabrow">
+        <button class="bd-rlist-toggle" type="button" id="bd-rlist-toggle"
+                aria-expanded="false" aria-controls="bd-rlist"
+                aria-label="Show related list">
+          <i class="ti ti-layout-sidebar" aria-hidden="true"></i>
+        </button>
+        <div class="bp-tabs">
+          <button class="bp-tab active">Overview</button>
+          <button class="bp-tab">Timeline</button>
+        </div>
       </div>
 
       <div class="bp-content type-1" id="bd-content">
-        <section class="card bd-card-details">
+        <section class="card bd-card-details" id="bd-card-details">
           <h2>Beat Details</h2>
           <!-- Type 1 keeps the original icon grid -->
           <div class="bp-detail-grid bd-only-1">
@@ -117,18 +139,15 @@
           </dl>
         </section>
 
-        <!-- In Type 2 this is the related-list card that holds the pair,
-             closed on arrival like any other related list. In Type 1 it is
-             display:contents, so the two cards sit in the page grid exactly
-             as before and the header never shows. -->
-        <section class="bd-related bd-rl-detail collapsed" id="bd-related">
+        <!-- In Type 2 this is the related-list card that holds the pair.
+             It carries no expand/collapse — the record's related-list rail
+             is what moves between the lists, so each one simply stands
+             open and the column scrolls. In Type 1 it is display:contents,
+             so the two cards sit in the page grid exactly as before and
+             the header never shows. -->
+        <section class="bd-related bd-rl-detail" id="bd-related">
           <header class="bd-related-head" id="bd-related-head">
             <h2>Beat Detail View</h2>
-            <button class="bd-related-toggle" type="button" id="bd-related-toggle"
-                    aria-expanded="false" aria-controls="bd-related-body"
-                    aria-label="Expand Beat Detail View">
-              <i class="ti ti-chevron-down" aria-hidden="true"></i>
-            </button>
           </header>
 
           <div class="bd-related-body" id="bd-related-body">
@@ -140,13 +159,13 @@
             <section class="bp-routemap card bd-card-map">
               <div class="bp-routemap-header">
                 <h2>Route Map</h2>
-                <a href="#">View Full Map <i class="ti ti-arrow-up-right"></i></a>
+                <a href="#" class="bd-open-map">View Full Map <i class="ti ti-arrow-up-right"></i></a>
               </div>
               <div class="map-area" id="map-area">
                 <canvas id="map-canvas" aria-label="Route map"></canvas>
                 <!-- Type 2 has no Route Map header to hang this off, so it
                      sits on the map, where it costs no height -->
-                <a class="bd-map-full bd-only-2" href="#">View Full Map <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>
+                <a class="bd-map-full bd-only-2 bd-open-map" href="#">View Full Map <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>
               </div>
             </section>
           </div>
@@ -158,11 +177,6 @@
         <section class="bd-related bd-rl-notes" id="bd-notes">
           <header class="bd-related-head">
             <h2>Notes</h2>
-            <button class="bd-related-toggle" type="button"
-                    aria-expanded="true" aria-controls="bd-notes-body"
-                    aria-label="Collapse Notes">
-              <i class="ti ti-chevron-down" aria-hidden="true"></i>
-            </button>
           </header>
 
           <div class="bd-related-body" id="bd-notes-body">
@@ -170,6 +184,8 @@
                       aria-label="Add a note"></textarea>
           </div>
         </section>
+      </div>
+      </div>
       </div>
     </main>
   </div>
@@ -297,6 +313,52 @@
   </div>
 
   <div class="bd-toast" id="bd-toast" role="status" aria-live="polite"></div>
+
+  <!-- Full map, as a side sheet over the record (Figma 5544:1008720).
+       The close button hangs outside the sheet's left edge, and the map
+       carries its own zoom, back-to-the-day and terrain controls. -->
+  <div class="bd-sheet-scrim" id="bd-sheet-scrim" hidden>
+    <aside class="bd-sheet" role="dialog" aria-modal="true" aria-labelledby="bd-sheet-title">
+      <button class="bd-sheet-close" type="button" id="bd-sheet-close" aria-label="Close map view">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+
+      <header class="bd-sheet-head">
+        <h2 id="bd-sheet-title">BP - 003 — Map View</h2>
+      </header>
+
+      <div class="bd-sheet-map" id="bd-sheet-map">
+        <canvas id="bd-sheet-canvas" aria-label="Route map, full view"></canvas>
+
+        <!-- Shared controls, from src/map-controls.css -->
+        <div class="cb-map-controls bd-sheet-ctrls">
+          <button class="cb-ctrl-btn" type="button" id="bd-map-locate"
+                  aria-label="Back to the current day" title="Back to the current day">
+            <i class="ti ti-current-location" aria-hidden="true"></i>
+          </button>
+          <div class="cb-zoom">
+            <button type="button" id="bd-map-zoom-in" aria-label="Zoom in">
+              <i class="ti ti-plus" aria-hidden="true"></i>
+            </button>
+            <button type="button" id="bd-map-zoom-out" aria-label="Zoom out">
+              <i class="ti ti-minus" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <button class="cb-layers bd-terrain" type="button" id="bd-terrain"
+                aria-expanded="false" aria-controls="bd-terrain-menu">
+          <span class="cb-layers-label"><i class="ti ti-stack-2" aria-hidden="true"></i>Layers</span>
+        </button>
+
+        <div class="bd-terrain-menu" id="bd-terrain-menu" role="group" aria-label="Terrain" hidden>
+          <button class="bd-terrain-opt active" type="button" data-terrain="map">Map</button>
+          <button class="bd-terrain-opt" type="button" data-terrain="satellite">Satellite</button>
+          <button class="bd-terrain-opt" type="button" data-terrain="terrain">Terrain</button>
+        </div>
+      </div>
+    </aside>
+  </div>
 
   <script src="src/data.js"></script>
   <script src="src/map.js"></script>

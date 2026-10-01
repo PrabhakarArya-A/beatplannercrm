@@ -48,6 +48,9 @@ body {
   gap: 12px;
   padding: 14px 20px;
   background: #fff;
+  /* Closes the record header off against what follows, the same rule the
+     top bar uses */
+  border-bottom: 1px solid #e6e9f2;
   flex-shrink: 0;
 }
 
