@@ -17,6 +17,11 @@
 
       <header class="bp-topbar">
         <h1 class="bp-topbar-title">Beats</h1>
+        <!-- Two arrangements of the same detail view; behaviour is identical -->
+        <div class="bd-layout" role="group" aria-label="Detail view layout">
+          <button class="bd-layout-btn active" type="button" data-layout="1">Type 1</button>
+          <button class="bd-layout-btn" type="button" data-layout="2">Type 2</button>
+        </div>
         <div class="bp-search"><i class="ti ti-search" aria-hidden="true"></i><span>Search records</span></div>
         <div class="bp-topbar-icons">
           <button class="bp-tb-btn plus" aria-label="Add"><i class="ti ti-plus"></i></button>
@@ -66,10 +71,11 @@
         <button class="bp-tab">Timeline</button>
       </div>
 
-      <div class="bp-content">
-        <section class="bp-details card">
+      <div class="bp-content type-1" id="bd-content">
+        <section class="card bd-card-details">
           <h2>Beat Details</h2>
-          <div class="bp-detail-grid">
+          <!-- Type 1 keeps the original icon grid -->
+          <div class="bp-detail-grid bd-only-1">
             <div class="bp-detail">
               <i class="ti ti-user-circle" style="color:#5a78ff"></i>
               <div>
@@ -81,7 +87,7 @@
               <i class="ti ti-map-pin" style="color:#c35bf4"></i>
               <div>
                 <div class="bp-detail-label">Beat Summary</div>
-                <div class="bp-detail-value" id="bd-summary">9 Visits · 32.6 km</div>
+                <div class="bp-detail-value">9 Visits · 32.6 km</div>
               </div>
             </div>
             <div class="bp-detail">
@@ -93,17 +99,75 @@
             </div>
           </div>
 
-          <div class="bp-visits-title">Visits</div>
-          <div id="bd-days"></div>
+          <!-- Type 2 uses the CRM business-card pattern: right-aligned
+               label, value beside it, no icons -->
+          <dl class="bd-fields bd-only-2">
+            <div class="bd-fields-row">
+              <dt>Beat Owner</dt>
+              <dd>Cameron Williamson</dd>
+            </div>
+            <div class="bd-fields-row">
+              <dt>Beat Summary</dt>
+              <dd>9 Visits · 32.6 km</dd>
+            </div>
+            <div class="bd-fields-row">
+              <dt>Beat Duration</dt>
+              <dd>4 May 2026 - 6 May 2026</dd>
+            </div>
+          </dl>
         </section>
 
-        <section class="bp-routemap card">
-          <div class="bp-routemap-header">
-            <h2>Route Map</h2>
-            <a href="#">View Full Map <i class="ti ti-arrow-up-right"></i></a>
+        <!-- In Type 2 this is the related-list card that holds the pair,
+             closed on arrival like any other related list. In Type 1 it is
+             display:contents, so the two cards sit in the page grid exactly
+             as before and the header never shows. -->
+        <section class="bd-related bd-rl-detail collapsed" id="bd-related">
+          <header class="bd-related-head" id="bd-related-head">
+            <h2>Beat Detail View</h2>
+            <button class="bd-related-toggle" type="button" id="bd-related-toggle"
+                    aria-expanded="false" aria-controls="bd-related-body"
+                    aria-label="Expand Beat Detail View">
+              <i class="ti ti-chevron-down" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <div class="bd-related-body" id="bd-related-body">
+            <section class="card bd-card-visits bp-details">
+              <div class="bp-visits-title">Visits</div>
+              <div id="bd-days"></div>
+            </section>
+
+            <section class="bp-routemap card bd-card-map">
+              <div class="bp-routemap-header">
+                <h2>Route Map</h2>
+                <a href="#">View Full Map <i class="ti ti-arrow-up-right"></i></a>
+              </div>
+              <div class="map-area" id="map-area">
+                <canvas id="map-canvas" aria-label="Route map"></canvas>
+                <!-- Type 2 has no Route Map header to hang this off, so it
+                     sits on the map, where it costs no height -->
+                <a class="bd-map-full bd-only-2" href="#">View Full Map <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>
+              </div>
+            </section>
           </div>
-          <div class="map-area" id="map-area">
-            <canvas id="map-canvas" aria-label="Route map"></canvas>
+        </section>
+
+        <!-- A second related list, so the stack reads the way it will on
+             the record. Placeholder only: the box takes text and nothing
+             happens to it. Type 2 only. -->
+        <section class="bd-related bd-rl-notes" id="bd-notes">
+          <header class="bd-related-head">
+            <h2>Notes</h2>
+            <button class="bd-related-toggle" type="button"
+                    aria-expanded="true" aria-controls="bd-notes-body"
+                    aria-label="Collapse Notes">
+              <i class="ti ti-chevron-down" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <div class="bd-related-body" id="bd-notes-body">
+            <textarea class="bd-note-box" rows="2" placeholder="Add a note"
+                      aria-label="Add a note"></textarea>
           </div>
         </section>
       </div>

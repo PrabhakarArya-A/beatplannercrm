@@ -667,6 +667,52 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   fieldMap.resize();
 
+  /* ── Layout toggle ─────────────────────────────────── */
+  /* Only the arrangement changes; every behaviour above is shared. The
+     map is a canvas sized to its box, so it has to be re-measured once
+     the grid has settled into the new columns. */
+  const content = $('bd-content');
+  const LAYOUT_KEY = 'bd-layout';
+
+  function setLayout(type) {
+    content.classList.toggle('type-1', type === '1');
+    content.classList.toggle('type-2', type === '2');
+    document.querySelectorAll('.bd-layout-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.layout === type));
+    try { localStorage.setItem(LAYOUT_KEY, type); } catch { /* private mode */ }
+    requestAnimationFrame(() => fieldMap.resize());
+  }
+
+  document.querySelector('.bd-layout').addEventListener('click', e => {
+    const btn = e.target.closest('.bd-layout-btn');
+    if (btn) setLayout(btn.dataset.layout);
+  });
+
+  let savedLayout = '1';
+  try { savedLayout = localStorage.getItem(LAYOUT_KEY) || '1'; } catch { /* private mode */ }
+  setLayout(savedLayout);
+
+  /* A resized window changes the map's box too */
+  window.addEventListener('resize', () => fieldMap.resize());
+
+  /* ── The related lists (Type 2) ────────────────────── */
+  /* Beat Detail View arrives closed, the way a related list sits on a CRM
+     record; Notes arrives open so its box is visible. The whole header is
+     the hit area, not just the chevron. The map canvas has no box while
+     the detail body is hidden, so it is re-measured on the way open, once
+     the grid has settled. */
+  document.querySelectorAll('.bd-related-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const card = head.closest('.bd-related');
+      const btn = head.querySelector('.bd-related-toggle');
+      const name = head.querySelector('h2').textContent;
+      const open = !card.classList.toggle('collapsed');
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', `${open ? 'Collapse' : 'Expand'} ${name}`);
+      if (open) requestAnimationFrame(() => fieldMap.resize());
+    });
+  });
+
   document.querySelectorAll('.bp-tabs .bp-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.bp-tabs .bp-tab').forEach(t => t.classList.remove('active'));

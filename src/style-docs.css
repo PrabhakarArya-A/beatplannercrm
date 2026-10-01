@@ -15,6 +15,57 @@
   --dv-rule:    #edf0f4;
   --dv-link:    #5464f2;
   --dv-soft:    #f8faff;
+  --dv-field:   #ffffff;
+  --dv-hover:   #eef0f8;
+  --dv-code-bg: #f2f4fb;
+  --dv-code-fg: #3d4a6b;
+  --dv-note-bg: #fffdf2;
+  --dv-shadow:  rgba(17, 20, 30, 0.06);
+  color-scheme: light;
+}
+
+/* Dark. Declared once and reached two ways: by the system preference
+   while no explicit choice is stored, and by the choice itself. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --dv-bg:      #12141c;
+    --dv-card:    #1a1d27;
+    --dv-heading: #eceef5;
+    --dv-base:    #d3d7e3;
+    --dv-para:    #b3b9c9;
+    --dv-label:   #8b93a7;
+    --dv-border:  #2c3140;
+    --dv-rule:    #252936;
+    --dv-link:    #8f9bff;
+    --dv-soft:    #1f232f;
+    --dv-field:   #161923;
+    --dv-hover:   #232735;
+    --dv-code-bg: #232735;
+    --dv-code-fg: #b9c2e0;
+    --dv-note-bg: #241f14;
+    --dv-shadow:  rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --dv-bg:      #12141c;
+  --dv-card:    #1a1d27;
+  --dv-heading: #eceef5;
+  --dv-base:    #d3d7e3;
+  --dv-para:    #b3b9c9;
+  --dv-label:   #8b93a7;
+  --dv-border:  #2c3140;
+  --dv-rule:    #252936;
+  --dv-link:    #8f9bff;
+  --dv-soft:    #1f232f;
+  --dv-field:   #161923;
+  --dv-hover:   #232735;
+  --dv-code-bg: #232735;
+  --dv-code-fg: #b9c2e0;
+  --dv-note-bg: #241f14;
+  --dv-shadow:  rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,7 +104,7 @@ body {
   text-decoration: none;
 }
 
-.dv-back:hover { background: #eef0f8; }
+.dv-back:hover { background: var(--dv-hover); }
 
 .dv-brand { font-size: 16px; font-weight: 600; color: var(--dv-heading); }
 .dv-brand span { font-weight: 400; color: var(--dv-label); }
@@ -77,8 +128,8 @@ body {
   width: 100%;
   height: 34px;
   padding: 0 10px 0 32px;
-  background: var(--dv-card);
-  border: 1px solid #c0c8e2;
+  background: var(--dv-field);
+  border: 1px solid var(--dv-border);
   border-radius: 6px;
   font-family: inherit;
   font-size: 14px;
@@ -149,7 +200,7 @@ body {
   cursor: pointer;
 }
 
-.dv-item:hover { border-color: #c3cdf0; }
+.dv-item:hover { border-color: var(--dv-link); }
 
 .dv-item.active {
   border-color: var(--dv-link);
@@ -217,7 +268,7 @@ body {
   flex-shrink: 0;
   height: 30px;
   padding: 0 12px;
-  border: 1px solid #d5d8e9;
+  border: 1px solid var(--dv-border);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -225,7 +276,7 @@ body {
   text-decoration: none;
 }
 
-.dv-raw:hover { background: #f5f6fb; }
+.dv-raw:hover { background: var(--dv-hover); }
 
 /* ── Table of contents ───────────────────────────────── */
 .dv-toc-title {
@@ -234,7 +285,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #8c91ab;
+  color: var(--dv-label);
 }
 
 .dv-toc a {
@@ -297,18 +348,18 @@ body {
 
 .markdown code {
   padding: 1px 5px;
-  background: #f2f4fb;
+  background: var(--dv-code-bg);
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;
-  color: #3d4a6b;
+  color: var(--dv-code-fg);
 }
 
 .markdown pre {
   margin: 14px 0;
   padding: 14px 16px;
   overflow-x: auto;
-  background: #f8faff;
+  background: var(--dv-soft);
   border: 1px solid var(--dv-border);
   border-radius: 8px;
   line-height: 19px;
@@ -319,7 +370,7 @@ body {
 .markdown blockquote {
   margin: 14px 0;
   padding: 10px 16px;
-  background: #fffdf2;
+  background: var(--dv-note-bg);
   border-left: 3px solid #eda114;
   border-radius: 0 6px 6px 0;
   color: var(--dv-base);
@@ -359,7 +410,7 @@ body {
   vertical-align: top;
 }
 
-.markdown tbody tr:hover { background: #fafbff; }
+.markdown tbody tr:hover { background: var(--dv-soft); }
 
 /* Checklists read as checklists, not as bulleted boxes */
 .markdown input[type="checkbox"] {
@@ -369,3 +420,21 @@ body {
 }
 
 .markdown li:has(> input[type="checkbox"]) { list-style: none; margin-left: -18px; }
+
+/* ── Theme toggle ────────────────────────────────────── */
+.dv-theme {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--dv-border);
+  border-radius: 8px;
+  color: var(--dv-label);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dv-theme:hover { background: var(--dv-hover); color: var(--dv-base); }

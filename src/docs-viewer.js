@@ -136,7 +136,10 @@
       (updated
         ? `<span class="dv-updated"><i class="ti ti-clock" aria-hidden="true"></i>${escape(updated)}</span>`
         : '');
+    /* `download` saves the source rather than navigating to it, and
+       naming it keeps the original filename on disk */
     rawEl.href = FOLDER + doc.file;
+    rawEl.setAttribute('download', doc.file);
     headEl.hidden = false;
 
     /* The H1 is already in the page header, so drop it from the body */

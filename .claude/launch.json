@@ -1,1 +1,15 @@
-{"version": "0.0.1", "configurations": [{"name": "beat-planner", "runtimeExecutable": "python3", "runtimeArgs": ["/private/tmp/claude-502/-Users-murali-10131-Desktop-Test-Filter-field-view-crm/f2dfa396-b03b-457c-8d87-07ae9141b998/scratchpad/serve.py"], "port": 4321}]}
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "beat-planner",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "-c",
+        "import http.server, os, socketserver\nR = '/private/tmp/claude-502/-Users-murali-10131-Desktop-Test-Filter-field-view-crm/f2dfa396-b03b-457c-8d87-07ae9141b998/scratchpad/site'\nos.makedirs(R, exist_ok=True)\nclass H(http.server.SimpleHTTPRequestHandler):\n    def __init__(self, *a, **k): super().__init__(*a, directory=R, **k)\n    def end_headers(self):\n        self.send_header('Cache-Control', 'no-store, must-revalidate')\n        super().end_headers()\n    def log_message(self, *a): pass\nsocketserver.TCPServer.allow_reuse_address = True\nprint('serving ' + R + ' on http://127.0.0.1:4321', flush=True)\nsocketserver.TCPServer(('127.0.0.1', 4321), H).serve_forever()"
+      ],
+      "port": 4321
+    }
+  ]
+}

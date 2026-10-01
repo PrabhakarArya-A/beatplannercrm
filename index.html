@@ -5,7 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Beat Planner — Navigation</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <!-- Applied before first paint, or the wrong theme flashes -->
+  <script>
+    try {
+      var t = localStorage.getItem('bp-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
   <style>
+    :root {
+      --bg:        #eef1f9;
+      --card:      #ffffff;
+      --heading:   #202123;
+      --base:      #313949;
+      --label:     #616e88;
+      --border:    #d5d8e9;
+      --accent:    #5767f6;
+      --arrow:     #8b9bb8;
+      --shadow:    rgba(0, 0, 0, 0.06);
+      --shadow-up: rgba(0, 0, 0, 0.12);
+      color-scheme: light;
+    }
+
+    /* Dark. Declared once and reached two ways: by the system preference
+       while no explicit choice is stored, and by the choice itself. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:        #12141c;
+        --card:      #1a1d27;
+        --heading:   #eceef5;
+        --base:      #d3d7e3;
+        --label:     #8b93a7;
+        --border:    #2c3140;
+        --accent:    #8f9bff;
+        --arrow:     #6b7285;
+        --shadow:    rgba(0, 0, 0, 0.35);
+        --shadow-up: rgba(0, 0, 0, 0.5);
+        color-scheme: dark;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg:        #12141c;
+      --card:      #1a1d27;
+      --heading:   #eceef5;
+      --base:      #d3d7e3;
+      --label:     #8b93a7;
+      --border:    #2c3140;
+      --accent:    #8f9bff;
+      --arrow:     #6b7285;
+      --shadow:    rgba(0, 0, 0, 0.35);
+      --shadow-up: rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
@@ -15,20 +68,20 @@
       align-items: center;
       justify-content: center;
       gap: 40px;
-      background: #eef1f9;
-      color: #202123;
+      background: var(--bg);
+      color: var(--heading);
     }
 
     .home-title {
       font-size: 26px;
       font-weight: 600;
-      color: #202123;
+      color: var(--heading);
     }
 
     .home-subtitle {
       margin-top: -28px;
       font-size: 14px;
-      color: #616e88;
+      color: var(--label);
     }
 
     .nav-buttons {
@@ -44,38 +97,66 @@
       gap: 12px;
       width: 100%;
       padding: 16px 20px;
-      background: #fff;
-      border: 1px solid #d5d8e9;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 10px;
       font-family: inherit;
       font-size: 16px;
       font-weight: 500;
-      color: #313949;
+      color: var(--base);
       text-decoration: none;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px var(--shadow);
       transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
     }
 
     .nav-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-      border-color: #5767f6;
+      box-shadow: 0 6px 18px var(--shadow-up);
+      border-color: var(--accent);
     }
 
     .nav-btn i {
       font-size: 22px;
-      color: #5767f6;
+      color: var(--accent);
     }
 
     .nav-btn .nav-arrow {
       margin-left: auto;
       font-size: 18px;
-      color: #8b9bb8;
+      color: var(--arrow);
+    }
+
+    /* Sits out of the way in the corner — this page is a launcher, and
+       the theme is not one of the things being launched */
+    .home-theme {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--label);
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    .home-theme:hover { color: var(--base); border-color: var(--accent); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .nav-btn { transition: none; }
+      .nav-btn:hover { transform: none; }
     }
   </style>
 </head>
 <body>
+  <button class="home-theme" type="button" id="theme-toggle"></button>
+
   <div>
     <h1 class="home-title">Beat Planner</h1>
   </div>
@@ -122,5 +203,7 @@
       <i class="ti ti-chevron-right nav-arrow" aria-hidden="true"></i>
     </a>
   </nav>
+
+  <script src="src/theme.js"></script>
 </body>
 </html>

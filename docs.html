@@ -6,6 +6,13 @@
   <title>Docs — Beat Planner</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
   <link rel="stylesheet" href="src/style-docs.css" />
+  <!-- Applied before first paint, or the wrong theme flashes -->
+  <script>
+    try {
+      var t = localStorage.getItem('bp-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
 </head>
 <body>
 
@@ -17,6 +24,7 @@
       <input type="search" id="dv-filter" placeholder="Filter documents" aria-label="Filter documents" />
     </div>
     <span class="dv-count" id="dv-count"></span>
+    <button class="dv-theme" type="button" id="theme-toggle"></button>
   </header>
 
   <div class="dv-body">
@@ -30,8 +38,8 @@
           <h2 id="dv-doc-title"></h2>
           <p class="dv-doc-meta" id="dv-doc-meta"></p>
         </div>
-        <a class="dv-raw" id="dv-raw" href="#" target="_blank" rel="noopener">
-          <i class="ti ti-file-text" aria-hidden="true"></i>Raw
+        <a class="dv-raw" id="dv-raw" href="#" download>
+          <i class="ti ti-download" aria-hidden="true"></i>Download Raw
         </a>
       </div>
       <article class="dv-doc markdown" id="dv-doc"></article>
@@ -42,6 +50,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="src/theme.js"></script>
   <script src="src/docs-viewer.js"></script>
 </body>
 </html>

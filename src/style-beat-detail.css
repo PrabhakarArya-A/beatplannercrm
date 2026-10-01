@@ -588,3 +588,324 @@ select.bd-input:has(option[value=""]:checked) { color: #7c8bae; }
 /* A leg the rep has driven reports the real figure, so it reads a shade
    firmer than the estimate above it */
 .bd-leg-text.actual { color: var(--base); }
+
+/* ============================================================
+   Two layouts for the same detail view
+
+   Type 1 — Beat Details and Visits share the left column, the map
+            runs full height beside them. The two left cards butt up
+            against each other so they still read as one panel.
+   Type 2 — Beat Details spans the top; only Visits and the map sit
+            side by side. Built for a narrow host such as a related
+            list, where three things in one column is too cramped.
+
+   Grid, not a DOM change: the map canvas stays where it is and only
+   its box changes, so nothing has to be rebuilt on toggle.
+   ============================================================ */
+.bp-content {
+  display: grid;
+  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* ── Type 1 ──────────────────────────────────────────── */
+.bp-content.type-1 {
+  grid-template-columns: 455px minmax(0, 1fr);
+  grid-template-areas:
+    "details map"
+    "visits  map";
+  column-gap: 16px;
+  row-gap: 0;
+}
+
+/* The pair reads as one card: no gap, and only the outer corners round */
+.type-1 .bd-card-details {
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.type-1 .bd-card-visits { border-radius: 0 0 10px 10px; }
+
+/* ── Type 2 ──────────────────────────────────────────── */
+/* One column: the business card, then the related lists. Every row is
+   content-sized and the column scrolls, which is how a record page
+   behaves — stretching the rows to the viewport would leave a hole under
+   a collapsed card. 12px between cards is the Figma stack's rhythm. */
+.bp-content.type-2 {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "details"
+    "related"
+    "notes";
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.bd-card-details { grid-area: details; padding: 18px; }
+
+/* The shared sheet styles this heading via .bp-details, which now sits on
+   the visits card instead — so it needs saying again here */
+.bd-card-details h2 { font-size: 15px; font-weight: 600; color: var(--heading); }
+
+/* ── Beat Details ────────────────────────────────────── */
+/* Two presentations of the same three fields. Type 1 keeps the original
+   icon grid; Type 2 uses the CRM business-card pattern. Only one is ever
+   in the layout — every further change to this block belongs to Type 2. */
+.type-1 .bd-only-2,
+.type-2 .bd-only-1 { display: none; }
+
+/* Type 2: label right-aligned in its own column, value beside it. No
+   icons — the three labels say what they are, and colour-coded glyphs on
+   a summary this short were decoration rather than navigation. */
+.bd-fields { display: grid; gap: 16px 28px; margin-top: 16px; }
+
+/* Scoped under .bd-fields: .bd-field alone is the Add Visit modal's form
+   row, and this would otherwise redefine it */
+.bd-fields .bd-fields-row {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+}
+
+.bd-fields dt {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--label);
+  text-align: right;
+}
+
+.bd-fields dd {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--base);
+}
+
+/* Type 2 drops the heading — the business card carries no title in the
+   CRM, and the three labels already name themselves */
+.type-2 .bd-card-details h2 { display: none; }
+
+/* One field per row, each a horizontal label → value pair, stacked and
+   left-aligned in the band. Spread across three columns they sat far
+   apart from their own values, which is what this replaces. */
+.type-2 .bd-fields {
+  grid-template-columns: max-content;
+  gap: 22px;
+  margin-top: 0;
+}
+
+.type-2 .bd-fields .bd-fields-row { grid-template-columns: 120px max-content; gap: 24px; }
+
+.type-2 .bd-card-details { padding: 24px 18px; }
+
+@media (max-width: 1080px) {
+  .type-2 .bd-fields { grid-template-columns: minmax(0, 1fr); }
+}
+.bd-card-visits { width: auto; }
+
+/* Named areas exist on the page grid, which is their parent in Type 1
+   only — in Type 2 their parent is .bd-related-body */
+.type-1 .bd-card-visits { grid-area: visits; }
+.type-1 .bd-card-map    { grid-area: map; }
+
+/* ── Type 2: the related-list cards ──────────────────── */
+/* The developer drops this view into a CRM related list, so in Type 2 it
+   wears the related-list card itself — header, rule, body — built to the
+   Payment Schedule frame's spec (Figma 3267:42017). Closed on arrival,
+   like every other related list on a record.
+
+   In Type 1 the wrapper is display:contents, so the two cards fall
+   straight through into the page grid and nothing about that layout
+   changes. */
+.type-1 .bd-rl-detail,
+.type-1 .bd-rl-detail > .bd-related-body { display: contents; }
+.type-1 .bd-rl-detail > .bd-related-head { display: none; }
+
+/* Notes is scaffolding for the related-list stack, not part of the
+   reference layout */
+.type-1 .bd-rl-notes { display: none; }
+
+.type-2 .bd-related {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid #dcdbee;
+  border-radius: 6px;
+}
+
+.type-2 .bd-rl-detail { grid-area: related; }
+.type-2 .bd-rl-notes  { grid-area: notes; }
+
+.bd-related-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #d6d6e3;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Nothing below it to divide */
+.bd-related.collapsed .bd-related-head { border-bottom: none; }
+
+.bd-related-head h2 {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--heading);
+}
+
+.bd-related-toggle {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--label);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bd-related-toggle:hover { background: #f0f1ff; color: var(--bd-link); }
+
+.bd-related-toggle i { transition: transform 0.15s ease; }
+.bd-related.collapsed .bd-related-toggle i { transform: rotate(-90deg); }
+
+.type-2 .bd-related-body { padding: 20px; }
+
+/* 30 : 70 — the timeline reads as a list beside a map that needs the room */
+.type-2 .bd-rl-detail > .bd-related-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  gap: 20px;
+}
+
+/* After the two above, so it wins on equal specificity */
+.type-2 .bd-related.collapsed > .bd-related-body { display: none; }
+
+/* The card header already says Visits, and the Route Map header's only
+   other job was holding the link — which now rides on the map itself. */
+.type-2 .bp-visits-title,
+.type-2 .bp-routemap-header { display: none; }
+
+/* The map is the whole card now, so it rounds on all four corners */
+.type-2 .bp-routemap .map-area { border-radius: 10px; }
+
+/* Bounded rather than free-growing: the list scrolls inside its card
+   past this, which keeps the map beside it a sensible shape */
+.type-2 .bd-card-visits { max-height: 520px; }
+.type-2 .bd-card-map { min-height: 360px; }
+
+/* Sits over the map's top-right corner, clear of the route, and costs
+   none of the height Type 2 is short of */
+.bd-map-full {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 11px;
+  background: var(--card-bg);
+  border: 1px solid #dcdbee;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(17, 20, 30, 0.12);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--bd-link);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bd-map-full:hover { background: #f0f1ff; border-color: var(--bd-link); }
+
+/* ── Notes (placeholder) ─────────────────────────────── */
+.bd-note-box {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  background: var(--card-bg);
+  border: 1px solid #dcdbee;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--base);
+  resize: vertical;
+  outline: none;
+}
+
+.bd-note-box::placeholder { color: #8c91ab; }
+.bd-note-box:focus { border-color: var(--bd-link); }
+
+/* One column once there is no room to sit things side by side */
+@media (max-width: 1080px) {
+  .bp-content.type-1 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "details" "visits" "map";
+    grid-template-rows: auto auto minmax(320px, 1fr);
+    row-gap: 16px;
+  }
+
+  /* Type 2's page grid is already one column; it is the pair inside the
+     related list that has to stack */
+  .type-2 .bd-rl-detail > .bd-related-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(320px, 1fr);
+  }
+  .type-1 .bd-card-details {
+    border-radius: 10px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 18px;
+  }
+  .type-1 .bd-card-visits { border-radius: 10px; }
+}
+
+/* ── The toggle ──────────────────────────────────────── */
+.bd-layout {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 14px;
+  padding: 2px;
+  background: #e8ebf5;
+  border-radius: 8px;
+}
+
+.bd-layout-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label);
+  cursor: pointer;
+}
+
+.bd-layout-btn:hover { color: var(--base); }
+
+.bd-layout-btn.active {
+  background: #fff;
+  color: var(--heading);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
