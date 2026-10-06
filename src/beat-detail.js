@@ -82,6 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedDay = 0;
   let expanded = true;
 
+  /* Which of the three arrangements is showing. Type 3 is Type 2 with the
+     day's action moved onto the day itself, so it wears both classes — see
+     setLayout(). Read here because where the Start / End button goes
+     depends on it. */
+  let layout = '1';
+
   /* ── Elements ──────────────────────────────────────── */
   const $ = id => document.getElementById(id);
   const daysEl   = $('bd-days');
@@ -91,10 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const bandText = $('bd-band-text');
   const toastEl  = $('bd-toast');
   const dayAction = $('bd-day-action');
-  const sheetScrim = $('bd-sheet-scrim');
-
-  /* The full-map sheet's own map, built the first time the sheet opens */
-  let sheetMap = null;
 
   const escape = s => String(s).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -111,6 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (DAYS[index].status !== 'pending') return false;
     if (activeIndex() !== -1) return false;
     return DAYS.slice(0, index).every(d => d.status === 'done');
+  }
+
+  /* What this day offers the rep, if anything — Type 3 only, where the
+     action sits on the day rather than in the record header. The order
+     falls straight out of canStart(): at the outset only Day 1 can be
+     started, and each later day earns its button when the one before it is
+     closed. A day that is done offers nothing, and nor does one still
+     waiting its turn. */
+  function dayAct(i) {
+    if (DAYS[i].status === 'active') {
+      return { act: 'end', label: 'End', cls: 'bd-day-act-end' };
+    }
+    if (canStart(i)) {
+      return { act: 'start', label: 'Start', cls: 'bd-day-act-start' };
+    }
+    return null;
   }
 
   /* The record's own badge — a solid pill, not the pastel tags the days and
@@ -197,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
      page reports what happened rather than offering to change it. The tick
      and cross belong to the bottom-up screen, where a manager approves.
      No card either — the stop is plain text beside the rail. */
-  function visitHtml(visit, i, day, reached) {
+  function visitHtml(visit, i, day, reached, isCurrent) {
     const tag = day.status === 'pending' ? null : VISIT_TAG[visit.status];
     /* Only the stop in hand answers to a click, and only while its day runs */
     const settle = day.status === 'active' && visit.status === 'active';
@@ -205,9 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
        planned for; one never reached keeps its plan */
     const when = visit.status === 'done' && visit.actual ? visit.actual : visit.time;
     return `
-      <div class="bd-row bd-visit ${reached ? 'reached' : ''} ${settle ? 'bd-settleable' : ''}"
+      <div class="bd-row bd-visit ${reached ? 'reached' : ''} ${isCurrent ? 'bd-current' : ''} ${settle ? 'bd-settleable' : ''}"
            data-visit="${i}" ${settle ? 'title="Mark this visit completed"' : ''}>
-        <span class="bd-rail"><span class="bp-visit-num ${visit.status}">${i + 1}</span></span>
+        <span class="bd-rail ${visit.status === 'active' ? 'bd-pulsing' : ''}"><span class="bp-visit-num ${visit.status}">${i + 1}</span></span>
         <div class="bd-text">
           <p class="bd-visit-head">
             <span class="bd-visit-name">${escape(visit.name)}<span class="dot">&nbsp;&nbsp;•&nbsp;&nbsp;</span><span class="mod">${escape(visit.module)}</span></span>
@@ -230,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     day.visits.forEach((v, i) => {
       /* the leg into this stop, then the stop itself */
       rows.push(legHtml(i === 0 ? HOME : day.visits[i - 1], upto >= i));
-      rows.push(visitHtml(v, i, day, upto >= i));
+      rows.push(visitHtml(v, i, day, upto >= i, i === upto && !allDone));
     });
     rows.push(legHtml(day.visits[day.visits.length - 1], allDone));
     if (canAdd) {
@@ -250,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function dayHtml(day, index) {
     const tag = DAY_TAG[day.status];
+    const act = layout === '3' ? dayAct(index) : null;
     return `
       <div class="bp-day bd-day ${index === selectedDay ? 'selected' : ''} ${index === selectedDay && expanded ? 'expanded' : ''} ${day.status}" data-day="${index}">
         <div class="bp-day-header" aria-expanded="${index === selectedDay && expanded}">
@@ -257,6 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="bd-day-title">${day.label}<span class="dot">&nbsp;&nbsp;•&nbsp;&nbsp;</span><span class="date">${escape(day.date)}</span></span>
           ${tag ? `<span class="bp-visit-tag ${tag.cls}">${tag.label}</span>` : ''}
           <span class="bd-day-count">${dayTally(day)}</span>
+          ${act ? `<button class="bd-day-act ${act.cls}" type="button"
+                    data-act="${act.act}" data-day="${index}"
+                    aria-label="${act.label} ${day.label}">${act.label}</button>` : ''}
           ${dayClockHtml(day)}
         </div>
         <div class="bp-day-body">${timelineHtml(day, index)}</div>
@@ -290,6 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
      down the row first. Only ever one day is actionable, so there is only
      ever one button. */
   function renderDayAction() {
+    /* Type 3 puts it on the day row instead — and on desktop this is a
+       rarely used action, so it does not also hold the record's most
+       prominent slot */
+    if (layout === '3') { dayAction.hidden = true; return; }
     const running = activeIndex();
     if (running !== -1) {
       dayAction.hidden = false;
@@ -322,11 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDayAction();
     renderBand();
     if (window.bdMap) { window.bdMap._activeBeatDay = selectedDay; window.bdMap.draw(); }
-    /* The sheet shows the same day, so it follows the same changes */
-    if (sheetMap && !sheetScrim.hidden) {
-      sheetMap._activeBeatDay = selectedDay;
-      sheetMap.draw();
-    }
   }
 
   function toast(message) {
@@ -388,10 +409,60 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
+  /* Types 1 and 2 are the comparison, so they keep starting the day on the
+     click, as they always did. The confirmation belongs to Type 3, with the
+     rest of what Type 3 is proposing. */
   dayAction.addEventListener('click', () => {
     const i = Number(dayAction.dataset.day);
     if (dayAction.dataset.act === 'start') startDay(i);
     else openEndDay(i);
+  });
+
+  /* Distance is read off the legs: what was actually driven where we have
+     it, the estimate where we do not. Both confirmations use it. */
+  const kmOf = visit => {
+    const m = (visit.actualDrive || visit.drive || '').match(/([\d.]+)\s*km/);
+    return m ? Number(m[1]) : 0;
+  };
+
+  /* ── Start Day confirmation ────────────────────────── */
+  /* The click stamps a time that stands for "the rep began work, here,
+     now", and nothing afterwards can correct it — so it is asked for
+     rather than taken. Ending already asked; this closes the pair. */
+  const startOverlay = $('bd-start-overlay');
+  let startingDay = null;
+
+  function openStartDay(i) {
+    startingDay = i;
+    const day = DAYS[i];
+    const planned = day.visits.reduce((n, v) => n + kmOf(v), 0);
+    const first = day.visits[0];
+
+    $('bd-start-title').textContent = `Start ${day.label} ?`;
+    $('bd-start-sub').innerHTML =
+      `${escape(day.label)} • ${escape(day.date)}&nbsp;&nbsp;${day.visits.length} visits planned`;
+    $('bd-start-visits').textContent = String(day.visits.length);
+    $('bd-start-km').textContent = `${planned.toFixed(1)} km`;
+    $('bd-start-first').textContent = first ? first.name : '—';
+    $('bd-start-clock').textContent = clock();
+
+    startOverlay.hidden = false;
+    $('bd-start-confirm').focus();
+  }
+
+  function closeStartDay() { startOverlay.hidden = true; startingDay = null; }
+
+  $('bd-start-cancel').addEventListener('click', closeStartDay);
+  $('bd-start-confirm').addEventListener('click', () => {
+    const i = startingDay;
+    closeStartDay();
+    startDay(i);
+  });
+  startOverlay.addEventListener('click', e => {
+    if (e.target === startOverlay) closeStartDay();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !startOverlay.hidden) closeStartDay();
   });
 
   /* ── End Day confirmation ──────────────────────────── */
@@ -400,13 +471,6 @@ document.addEventListener('DOMContentLoaded', () => {
      left open. */
   const endOverlay = $('bd-end-overlay');
   let endingDay = null;
-
-  /* Distance covered is what was actually driven, so the leg's real figure
-     wins over its estimate wherever we have it */
-  const kmOf = visit => {
-    const m = (visit.actualDrive || visit.drive || '').match(/([\d.]+)\s*km/);
-    return m ? Number(m[1]) : 0;
-  };
 
   function elapsed(day) {
     if (!day.startedTs) return '—';
@@ -455,6 +519,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btn && btn.dataset.act === 'add') {
       openAddVisit(Number(btn.closest('.bd-day').dataset.day));
+      return;
+    }
+
+    /* Starting or ending the day from its own row. Returning here keeps the
+       click off the card, which would otherwise fold the day away. */
+    if (btn && (btn.dataset.act === 'start' || btn.dataset.act === 'end')) {
+      const i = Number(btn.dataset.day);
+      if (btn.dataset.act === 'start') openStartDay(i);
+      else openEndDay(i);
       return;
     }
 
@@ -769,11 +842,8 @@ document.addEventListener('DOMContentLoaded', () => {
   bindDayPicking(fieldMap);
   fieldMap.resize();
 
-  /* A resized window changes either map's box */
-  window.addEventListener('resize', () => {
-    fieldMap.resize();
-    if (sheetMap) sheetMap.resize();
-  });
+  /* A resized window changes the map's box too */
+  window.addEventListener('resize', () => fieldMap.resize());
 
   /* ── Layout toggle ─────────────────────────────────── */
   /* Only the arrangement changes; every behaviour above is shared. */
@@ -781,12 +851,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const LAYOUT_KEY = 'bd-layout';
 
   function setLayout(type) {
+    layout = type;
     content.classList.toggle('type-1', type === '1');
-    content.classList.toggle('type-2', type === '2');
+    /* Type 3 is Type 2's arrangement with the day's action moved, so it
+       wears type-2 as well and inherits the whole layout rather than
+       copying thirty selectors */
+    content.classList.toggle('type-2', type === '2' || type === '3');
+    content.classList.toggle('type-3', type === '3');
     document.querySelectorAll('.bd-layout-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.layout === type));
-    /* Reaches the toolbar button, which sits outside .bp-content */
-    document.body.classList.toggle('bd-in-list', type === '2');
+    /* Reaches the rail and the toolbar button, both outside .bp-content */
+    document.body.classList.toggle('bd-in-list', type === '2' || type === '3');
     try { localStorage.setItem(LAYOUT_KEY, type); } catch { /* private mode */ }
     render();   /* the action moves between the toolbar and the day rows */
     /* Flush the new arrangement, then fit the canvas to it */
@@ -802,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let savedLayout = '1';
   try { savedLayout = localStorage.getItem(LAYOUT_KEY) || '1'; } catch { /* private mode */ }
+  if (!['1', '2', '3'].includes(savedLayout)) savedLayout = '1';
   setLayout(savedLayout);
 
 
@@ -866,14 +942,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.bdMarkRail = markRail;
   markRail();
 
-  /* ── Full map side sheet (Figma 5544:1008720) ───────── */
-  /* A second map rather than the card's one moved across: both are built by
-     configureBeatMap, so the sheet draws exactly what the card does at the
-     size it actually has, and the card keeps its canvas. Built on first
-     open — a sheet nobody opens costs nothing. */
+  /* ── Map controls ──────────────────────────────────── */
+  /* Zoom, back-to-the-day and terrain, riding on the card's own map. There
+     is no separate full view: the map is large enough to work in where it
+     stands, so the controls come to it. */
   const terrainBtn  = $('bd-terrain');
   const terrainMenu = $('bd-terrain-menu');
-  const sheetClose  = $('bd-sheet-close');
 
   /* The day the map answers for: the one running, else the one selected */
   const dayInView = () => (activeIndex() !== -1 ? activeIndex() : selectedDay);
@@ -883,65 +957,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* The thumbnail previews whichever terrain is in use */
   function paintTerrain() {
-    const name = sheetMap ? sheetMap.terrain : 'map';
-    terrainBtn.style.background = FieldMap.TERRAINS[name].bg;
+    terrainBtn.style.background = FieldMap.TERRAINS[fieldMap.terrain].bg;
     terrainMenu.querySelectorAll('.bd-terrain-opt').forEach(opt =>
-      opt.classList.toggle('active', opt.dataset.terrain === name));
+      opt.classList.toggle('active', opt.dataset.terrain === fieldMap.terrain));
   }
-
-  function openSheet() {
-    sheetScrim.hidden = false;
-    if (!sheetMap) {
-      /* It fills the sheet, so the wheel and a single finger are its own */
-      sheetMap = configureBeatMap(
-        new FieldMap('bd-sheet-canvas', 'bd-sheet-map').takeGestures());
-      bindDayPicking(sheetMap);
-    }
-    const day = dayInView();
-    sheetMap._activeBeatDay = day;
-    /* It was display:none a moment ago, so flush the layout before the
-       canvas is measured against its new box */
-    void sheetScrim.offsetWidth;
-    sheetMap.resize();
-    sheetMap.fitBounds(dayPoints(day));
-    paintTerrain();
-    sheetClose.focus();
-  }
-
-  function closeSheet() {
-    sheetScrim.hidden = true;
-    terrainMenu.hidden = true;
-    terrainBtn.setAttribute('aria-expanded', 'false');
-  }
-
-  document.querySelectorAll('.bd-open-map').forEach(link => {
-    link.addEventListener('click', e => { e.preventDefault(); openSheet(); });
-  });
-
-  sheetClose.addEventListener('click', closeSheet);
-  sheetScrim.addEventListener('click', e => {
-    if (e.target === sheetScrim) closeSheet();
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !sheetScrim.hidden) closeSheet();
-  });
+  paintTerrain();
 
   /* Zoom from the middle of the canvas, which is what the buttons imply */
   const ZOOM_STEP = 1.3;
-  function zoomSheet(factor) {
-    if (!sheetMap) return;
-    sheetMap.zoom(factor, sheetMap.canvas.width / 2, sheetMap.canvas.height / 2);
+  function zoomMap(factor) {
+    fieldMap.zoom(factor, fieldMap.canvas.width / 2, fieldMap.canvas.height / 2);
   }
-  $('bd-map-zoom-in').addEventListener('click', () => zoomSheet(ZOOM_STEP));
-  $('bd-map-zoom-out').addEventListener('click', () => zoomSheet(1 / ZOOM_STEP));
+  $('bd-map-zoom-in').addEventListener('click', () => zoomMap(ZOOM_STEP));
+  $('bd-map-zoom-out').addEventListener('click', () => zoomMap(1 / ZOOM_STEP));
 
   /* "Current location" is the day in hand for now — where the rep actually
      is is not something this prototype knows */
   $('bd-map-locate').addEventListener('click', () => {
-    if (!sheetMap) return;
     const day = dayInView();
-    sheetMap._activeBeatDay = day;
-    sheetMap.fitBounds(dayPoints(day));
+    fieldMap._activeBeatDay = day;
+    fieldMap.fitBounds(dayPoints(day));
   });
 
   terrainBtn.addEventListener('click', () => {
@@ -950,10 +985,18 @@ document.addEventListener('DOMContentLoaded', () => {
     terrainBtn.setAttribute('aria-expanded', String(open));
   });
 
+  /* Anywhere else dismisses the terrain menu */
+  document.addEventListener('click', e => {
+    if (terrainMenu.hidden) return;
+    if (e.target.closest('#bd-terrain, #bd-terrain-menu')) return;
+    terrainMenu.hidden = true;
+    terrainBtn.setAttribute('aria-expanded', 'false');
+  });
+
   terrainMenu.addEventListener('click', e => {
     const opt = e.target.closest('.bd-terrain-opt');
-    if (!opt || !sheetMap) return;
-    sheetMap.setTerrain(opt.dataset.terrain);
+    if (!opt) return;
+    fieldMap.setTerrain(opt.dataset.terrain);
     paintTerrain();
     terrainMenu.hidden = true;
     terrainBtn.setAttribute('aria-expanded', 'false');

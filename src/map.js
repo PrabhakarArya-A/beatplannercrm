@@ -37,12 +37,6 @@ class FieldMap {
     this.activeModule = 'all';
     this.terrain = 'map';
 
-    /* True on a map that has the screen to itself — one in a sheet or a
-       modal, with no page behind it to scroll. Such a map takes the wheel
-       and a single finger for itself, the way a full map should. An
-       embedded one leaves both to the page; see takeGestures(). */
-    this.ownsGestures = false;
-
     /* pin bounce: Map<pin object → animation start timestamp> */
     this._bouncingPins  = new Map();
     this._bounceLooping = false;
@@ -192,15 +186,6 @@ class FieldMap {
     this._drawPins();
 
     ctx.restore();
-  }
-
-  /* Call on a map that fills a sheet or modal: the wheel zooms with no
-     modifier and one finger pans, because there is nothing behind it that
-     either gesture could belong to instead. */
-  takeGestures() {
-    this.ownsGestures = true;
-    this.canvas.classList.add('fm-owns-gestures');
-    return this;
   }
 
   get palette() { return FieldMap.TERRAINS[this.terrain] || FieldMap.TERRAINS.map; }
@@ -430,32 +415,27 @@ class FieldMap {
       this.lastX = e.clientX; this.lastY = e.clientY;
     });
 
-    /* An embedded map leaves a bare wheel to the page and zooms only on
-       Ctrl / ⌘, so the record scrolls as it would over anything else — this
-       map used to swallow every wheel. A map that owns its gestures zooms
-       on a bare wheel, there being no page behind it to scroll. Either way
-       a trackpad pinch arrives as a wheel with ctrlKey already set, so
-       pinch to zoom needs nothing extra. */
+    /* The map leaves a bare wheel to the page and zooms only on Ctrl / ⌘,
+       so the record scrolls as it would over anything else — this map used
+       to swallow every wheel. A trackpad pinch arrives here as a wheel with
+       ctrlKey already set, so pinch to zoom needs nothing extra. */
     canvas.addEventListener('wheel', e => {
-      if (!this.ownsGestures && !e.ctrlKey && !e.metaKey) { this._hintZoom(); return; }
+      if (!e.ctrlKey && !e.metaKey) { this._hintZoom(); return; }
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       this.zoom(e.deltaY > 0 ? 0.85 : 1.18, e.clientX - rect.left, e.clientY - rect.top);
     }, { passive: false });
 
-    /* On an embedded map one finger scrolls the page — see touch-action on
-       .fm-canvas — and two pan the map, tracked by the midpoint between
-       them. Before this a one-finger swipe dragged the map and scrolled the
-       record at once. A map that owns its gestures pans on one finger too. */
-    const point = touches => (touches.length === 2
-      ? { x: (touches[0].clientX + touches[1].clientX) / 2,
-          y: (touches[0].clientY + touches[1].clientY) / 2 }
-      : { x: touches[0].clientX, y: touches[0].clientY });
-
-    const panningTouch = n => n === 2 || (n === 1 && this.ownsGestures);
+    /* One finger scrolls the page — see touch-action on .fm-canvas — and
+       two pan the map, tracked by the midpoint between them. Before this a
+       one-finger swipe dragged the map and scrolled the record at once. */
+    const point = touches => ({
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    });
 
     canvas.addEventListener('touchstart', e => {
-      if (!panningTouch(e.touches.length)) { this.isDragging = false; return; }
+      if (e.touches.length !== 2) { this.isDragging = false; return; }
       const m = point(e.touches);
       this.isDragging = true;
       this.dragMoved = true;
@@ -463,7 +443,7 @@ class FieldMap {
     }, { passive: true });
 
     canvas.addEventListener('touchmove', e => {
-      if (!this.isDragging || !panningTouch(e.touches.length)) return;
+      if (!this.isDragging || e.touches.length !== 2) return;
       e.preventDefault();
       const m = point(e.touches);
       this.pan(m.x - this.lastX, m.y - this.lastY);
@@ -507,10 +487,6 @@ class FieldMap {
       /* One finger is the page's: a swipe scrolls the record rather than
          dragging the map out from under it. Two fingers are the map's. */
       .fm-canvas { touch-action: pan-y; }
-
-      /* Unless the map owns its gestures, in which case every touch is its
-         own — there is no page behind it to scroll */
-      .fm-canvas.fm-owns-gestures { touch-action: none; }
 
       .fm-zoom-hint {
         position: absolute;

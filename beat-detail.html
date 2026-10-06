@@ -22,6 +22,7 @@
         <div class="bd-layout" role="group" aria-label="Detail view layout">
           <button class="bd-layout-btn active" type="button" data-layout="1">Type 1</button>
           <button class="bd-layout-btn" type="button" data-layout="2">Type 2</button>
+          <button class="bd-layout-btn" type="button" data-layout="3">Type 3</button>
         </div>
         <div class="bp-search"><i class="ti ti-search" aria-hidden="true"></i><span>Search records</span></div>
         <div class="bp-topbar-icons">
@@ -159,13 +160,39 @@
             <section class="bp-routemap card bd-card-map">
               <div class="bp-routemap-header">
                 <h2>Route Map</h2>
-                <a href="#" class="bd-open-map">View Full Map <i class="ti ti-arrow-up-right"></i></a>
+                <a href="#">View Full Map <i class="ti ti-arrow-up-right"></i></a>
               </div>
               <div class="map-area" id="map-area">
                 <canvas id="map-canvas" aria-label="Route map"></canvas>
-                <!-- Type 2 has no Route Map header to hang this off, so it
-                     sits on the map, where it costs no height -->
-                <a class="bd-map-full bd-only-2 bd-open-map" href="#">View Full Map <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>
+
+                <!-- The map is big enough to work in where it stands, so the
+                     controls ride on it rather than on a separate full view.
+                     Type 2 only; Type 1 keeps its Route Map header. -->
+                <div class="cb-map-controls bd-map-ctrls bd-only-2">
+                  <button class="cb-ctrl-btn" type="button" id="bd-map-locate"
+                          aria-label="Back to the current day" title="Back to the current day">
+                    <i class="ti ti-current-location" aria-hidden="true"></i>
+                  </button>
+                  <div class="cb-zoom">
+                    <button type="button" id="bd-map-zoom-in" aria-label="Zoom in">
+                      <i class="ti ti-plus" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" id="bd-map-zoom-out" aria-label="Zoom out">
+                      <i class="ti ti-minus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <button class="cb-layers bd-terrain bd-only-2" type="button" id="bd-terrain"
+                        aria-expanded="false" aria-controls="bd-terrain-menu">
+                  <span class="cb-layers-label"><i class="ti ti-stack-2" aria-hidden="true"></i>Layers</span>
+                </button>
+
+                <div class="bd-terrain-menu bd-only-2" id="bd-terrain-menu" role="group" aria-label="Terrain" hidden>
+                  <button class="bd-terrain-opt active" type="button" data-terrain="map">Map</button>
+                  <button class="bd-terrain-opt" type="button" data-terrain="satellite">Satellite</button>
+                  <button class="bd-terrain-opt" type="button" data-terrain="terrain">Terrain</button>
+                </div>
               </div>
             </section>
           </div>
@@ -312,53 +339,35 @@
     </div>
   </div>
 
-  <div class="bd-toast" id="bd-toast" role="status" aria-live="polite"></div>
-
-  <!-- Full map, as a side sheet over the record (Figma 5544:1008720).
-       The close button hangs outside the sheet's left edge, and the map
-       carries its own zoom, back-to-the-day and terrain controls. -->
-  <div class="bd-sheet-scrim" id="bd-sheet-scrim" hidden>
-    <aside class="bd-sheet" role="dialog" aria-modal="true" aria-labelledby="bd-sheet-title">
-      <button class="bd-sheet-close" type="button" id="bd-sheet-close" aria-label="Close map view">
-        <i class="ti ti-x" aria-hidden="true"></i>
-      </button>
-
-      <header class="bd-sheet-head">
-        <h2 id="bd-sheet-title">BP - 003 — Map View</h2>
+  <!-- Starting a day stamps a time that stands for "the rep began work,
+       here, now", so it is asked for rather than taken on one click. -->
+  <div class="bd-overlay bd-overlay-top" id="bd-start-overlay" hidden>
+    <div class="bd-modal bd-modal-start" role="dialog" aria-modal="true" aria-labelledby="bd-start-title">
+      <header class="bd-modal-head">
+        <h2 class="bd-modal-title" id="bd-start-title"></h2>
+        <p class="bd-end-sub" id="bd-start-sub"></p>
       </header>
 
-      <div class="bd-sheet-map" id="bd-sheet-map">
-        <canvas id="bd-sheet-canvas" aria-label="Route map, full view"></canvas>
-
-        <!-- Shared controls, from src/map-controls.css -->
-        <div class="cb-map-controls bd-sheet-ctrls">
-          <button class="cb-ctrl-btn" type="button" id="bd-map-locate"
-                  aria-label="Back to the current day" title="Back to the current day">
-            <i class="ti ti-current-location" aria-hidden="true"></i>
-          </button>
-          <div class="cb-zoom">
-            <button type="button" id="bd-map-zoom-in" aria-label="Zoom in">
-              <i class="ti ti-plus" aria-hidden="true"></i>
-            </button>
-            <button type="button" id="bd-map-zoom-out" aria-label="Zoom out">
-              <i class="ti ti-minus" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
-
-        <button class="cb-layers bd-terrain" type="button" id="bd-terrain"
-                aria-expanded="false" aria-controls="bd-terrain-menu">
-          <span class="cb-layers-label"><i class="ti ti-stack-2" aria-hidden="true"></i>Layers</span>
-        </button>
-
-        <div class="bd-terrain-menu" id="bd-terrain-menu" role="group" aria-label="Terrain" hidden>
-          <button class="bd-terrain-opt active" type="button" data-terrain="map">Map</button>
-          <button class="bd-terrain-opt" type="button" data-terrain="satellite">Satellite</button>
-          <button class="bd-terrain-opt" type="button" data-terrain="terrain">Terrain</button>
+      <div class="bd-modal-body">
+        <dl class="bd-summary">
+          <div><dt>Visits Planned</dt><dd id="bd-start-visits"></dd></div>
+          <div><dt>Planned Distance</dt><dd id="bd-start-km"></dd></div>
+          <div><dt>First Stop</dt><dd id="bd-start-first"></dd></div>
+          <div><dt>Start Time</dt><dd id="bd-start-clock"></dd></div>
+        </dl>
+        <div class="bd-end-note-wrap">
+          <p class="bd-end-note"><b>Note:</b> The start time is logged as now and cannot be edited afterwards</p>
         </div>
       </div>
-    </aside>
+
+      <footer class="bd-modal-foot">
+        <button class="bp-btn default" type="button" id="bd-start-cancel">Cancel</button>
+        <button class="bp-btn primary" type="button" id="bd-start-confirm">Start Day</button>
+      </footer>
+    </div>
   </div>
+
+  <div class="bd-toast" id="bd-toast" role="status" aria-live="polite"></div>
 
   <script src="src/data.js"></script>
   <script src="src/map.js"></script>
