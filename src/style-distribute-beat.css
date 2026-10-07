@@ -1,0 +1,214 @@
+/* ============================================================
+   Distribute Beat — what it adds to Create Beat's styles
+   Figma 1384:56699 / 1406:37302 "Distribute Beat Plans"
+   ============================================================ */
+:root {
+  --link:           #5464f2;   /* Primary Palette/Link */
+  --error-outline:  #ff5d5a;   /* Component/Input/Error&Mandatory-Outline */
+  --list-border:    #dcdbee;   /* Border Colors/Border-3 */
+}
+
+/* Continue — Primary Button, gradient to top */
+.cb-btn.save.db-continue.enabled {
+  background: linear-gradient(to top, #124dc3, var(--btn-primary));
+}
+
+/* ── Beat Details ───────────────────────────────────── */
+/* "Distribution Name" runs to two lines, so its row is 40px, the label
+   8px down from the top and the field centred against it */
+.db-name-row { align-items: flex-start; }
+.db-name-row .cb-field-label { padding-top: 8px; line-height: 16px; }
+.db-name-row .cb-field-control { padding-top: 3px; }
+
+/* Input: 3px lead-in (red when mandatory), text at 10px either side */
+.db-input {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  background: #fff;
+  border: 1px solid var(--input-outline);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: text;
+}
+
+.db-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-base);
+}
+
+.db-input input::placeholder { color: var(--placeholder-date); }
+.db-input:focus-within { border-color: var(--btn-primary); }
+.db-input.is-invalid   { border-color: var(--error-outline); }
+
+/* Joined start / end fields */
+.db-duration { display: flex; }
+.db-duration .db-input { flex: 1; min-width: 0; }
+.db-duration .db-input:first-child { border-radius: 6px 0 0 6px; }
+.db-duration .db-input:last-child  { border-radius: 0 6px 6px 0; margin-left: -1px; }
+/* the focused half's edge shows over its neighbour */
+.db-duration .db-input:focus-within,
+.db-duration .db-input.is-invalid { position: relative; z-index: 1; }
+
+/* ── Picked records ─────────────────────────────────── */
+.db-sel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 27px;
+  margin-bottom: 10px;
+}
+
+.db-sel-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--text-heading);
+}
+
+/* Primary Link */
+.db-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.db-link:hover { text-decoration: underline; }
+
+/* Ghost Blue Btn-Small */
+.db-ghost {
+  display: flex;
+  align-items: center;
+  gap: 5px;   /* Figma gap 3 + the label's 2px */
+  height: 27px;
+  padding: 6px 10px 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.db-ghost img { display: block; width: 10px; height: 5px; margin-top: 1px; }
+.db-ghost:hover,
+.db-ghost[aria-expanded="true"] { background: #f2f5fe; }
+
+/* hangs from the button's right edge, under the panel's right margin */
+.db-apply > .cb-menu { left: auto; right: 0; }
+
+/* The list runs the panel's full width, past its 15px padding */
+.db-list {
+  list-style: none;
+  margin: 0 -15px;
+}
+
+/* Quick Select */
+.db-rec {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 15px;
+  border-bottom: 0.5px solid var(--list-border);
+}
+
+.db-rec:last-child { border-bottom: none; }
+
+.db-rec-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+}
+
+.db-rec-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.db-rec-text p { overflow: hidden; text-overflow: ellipsis; }
+.db-rec-name { font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-base); }
+.db-rec-mod  { font-size: 13px; color: var(--text-label); }
+
+/* Small Dropdown — 160px, 25px lead-in, 13px text */
+.db-vt { flex-shrink: 0; width: 160px; }
+
+.db-small-dd {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--input-outline);
+  border-radius: 5px;
+  font: inherit;
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.db-small-strip { display: block; flex-shrink: 0; width: 3px; height: 25px; margin-left: -1px; }
+
+.db-small-text {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 5px 6px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 13px;
+  text-align: left;
+}
+
+.db-small-caret { display: flex; flex-shrink: 0; padding-right: 8px; }
+.db-small-caret img { display: block; width: 10px; height: 5px; transition: transform 0.15s; }
+.db-vt.open .db-small-dd { border-color: var(--btn-primary); }
+.db-vt.open .db-small-caret img { transform: rotate(180deg); }
+
+/* List Address Icon — 24px round hit area, 8px close */
+.db-rec-remove {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 60px;
+  background: none;
+  cursor: pointer;
+}
+
+.db-rec-remove span { position: relative; display: block; width: 8px; height: 8px; }
+.db-rec-remove img { position: absolute; top: -0.75px; left: -0.75px; display: block; width: 9.5px; height: 9.5px; max-width: none; }
+.db-rec-remove:hover { background: #f1f0f7; }
+
+/* ── Map ────────────────────────────────────────────── */
+.map-area canvas.db-over-pin { cursor: pointer; }
+
+/* icon/ configure settings, 16px in the 32px button */
+.db-settings-icon { display: block; width: 16px; height: 16px; }

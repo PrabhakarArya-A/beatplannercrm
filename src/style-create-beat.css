@@ -16,6 +16,8 @@
   --btn-primary-dis:  #adb3ee;
   --border-3:         #d7e2ed;
   --card-shadow:      0 2px 8px rgba(0, 0, 0, 0.15);
+  --menu-outline:     #ced0e1;   /* Component/Dropdown/Outline */
+  --menu-hover:       #f2f5fe;   /* Component/Dropdown/Dropdown Hover */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -216,13 +218,14 @@ body {
 /* Contacts module dropdown */
 .cb-module-wrap { position: relative; }
 
+/* Figma Dropdown (I3114:72142): a 3px lead-in, the label at 10px either
+   side, then the filled caret. It hugs its label — 103px for "Contacts" —
+   rather than holding the 200px it used to. */
 .cb-module-select {
   display: flex;
   align-items: center;
-  gap: 8px;
   height: 34px;
-  min-width: 200px;
-  padding: 0 10px;
+  padding: 0;   /* Figma py-px / pr-px, less the inside stroke */
   background: #fff;
   border: 1px solid var(--input-outline);
   border-radius: 6px;
@@ -231,74 +234,476 @@ body {
   cursor: pointer;
 }
 
-.cb-module-select .cb-fill { flex: 1; }
-.cb-module-select .cb-module-caret { opacity: 0.6; font-size: 14px; transition: transform 0.15s; }
-.cb-module-select[aria-expanded="true"] { border-color: var(--btn-primary); }
-.cb-module-select[aria-expanded="true"] .cb-module-caret { transform: rotate(180deg); }
+/* The lead-in sits under the left stroke, as an inside stroke would let it */
+.cb-strip { display: block; flex-shrink: 0; margin-left: -1px; }
 
-.cb-module-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 240px;
-  list-style: none;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: var(--card-shadow);
-  padding: 8px 0;
-  z-index: 20;
-  display: none;
+.cb-module-select .cb-fill {
+  padding: 8px 10px;
+  line-height: normal;
+  white-space: nowrap;
 }
 
-.cb-module-wrap.open .cb-module-panel { display: block; }
+.cb-module-select .cb-module-caret { display: flex; flex-shrink: 0; padding-right: 10px; }
+.cb-module-select .cb-module-caret img { display: block; transition: transform 0.15s; }
+.cb-module-select[aria-expanded="true"] { border-color: var(--btn-primary); }
+.cb-module-select[aria-expanded="true"] .cb-module-caret img { transform: rotate(180deg); }
 
-.cb-module-panel li {
+/* ── Dropdown menu (CbMenu, src/cb-menu.js) ─────────── */
+/* Figma "Dropdown Value" — 5767:1127941 (module) and 5767:1127823 (Records
+   per Page). One component; the heading row appears only when the menu is
+   given a title. Paddings are the Figma ones less the 1px inside stroke. */
+.cb-menu {
+  position: absolute;
+  top: 100%;   /* hangs straight off the trigger's bottom edge, no gap */
+  left: 0;
+  z-index: 20;
+  display: none;
+  width: max-content;
+  min-width: 223px;
+  padding: 5px 0;
+  background: #fff;
+  border: 1px solid var(--menu-outline);
+  border-radius: 6px;
+  box-shadow: var(--card-shadow);
+}
+
+.cb-module-wrap.open > .cb-menu { display: block; }
+
+.cb-menu-list { list-style: none; }
+
+.cb-menu-head {
+  padding: 10px 9px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Every row keeps the tick's 9px slot, so labels line up whether or not
+   they carry it (Figma: 25px in from the row = 10 + 9 + 6) */
+.cb-menu-opt {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 18px;
-  font-size: 15px;
+  gap: 6px;
+  margin: 0 5px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 16px;
   color: var(--text-base);
   cursor: pointer;
 }
 
-.cb-module-panel li:hover { background: #f5f7fc; }
-
-.cb-module-panel li i {
-  width: 16px;
-  font-size: 15px;
+.cb-menu-tick {
+  position: relative;
   flex-shrink: 0;
+  width: 9px;
+  height: 6px;
   visibility: hidden;
-  color: var(--text-base);
 }
 
-.cb-module-panel li.active i    { visibility: visible; }
-.cb-module-panel li.active span { font-weight: 700; }
+/* The asset's stroke runs 1px past the 9×6 slot, as the Figma frame lets it */
+.cb-menu-tick img {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  display: block;
+  width: 11px;
+  height: 8.39px;
+  max-width: none;
+}
 
-/* Filter button */
-.cb-filter-btn {
+.cb-menu-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cb-menu-opt.is-selected .cb-menu-tick { visibility: visible; }
+.cb-menu-opt.is-selected .cb-menu-text { font-weight: 600; }
+
+/* The chosen row rests highlighted; pointing at another row moves the
+   highlight there rather than lighting two rows */
+.cb-menu-opt:hover,
+.cb-menu-opt.is-selected { background: var(--menu-hover); }
+.cb-menu-list:hover .cb-menu-opt.is-selected:not(:hover) { background: none; }
+
+/* ── Filter (Figma 5763:222731) ─────────────────────── */
+/* Four states, all 34px tall: Default (white, input outline), Hover and
+   Applied (#f2f3fa with a #e6eaf5 edge), Opened (#f2f3fa, no edge).
+   Applied also carries the blue dot on the icon and a ✕ to lift the filter.
+
+   The border is always 1px and only its colour changes — Opened makes it
+   transparent rather than removing it — so the control never shifts by a
+   pixel as it moves between states. */
+.cbf { position: relative; }
+
+.cbf-btn {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  background: #fff;
+  border: 1px solid var(--input-outline);
+  border-radius: 6px;
+}
+
+.cbf-open {
   display: flex;
   align-items: center;
   gap: 4px;
+  height: 100%;
+  padding: 0 11px 0 9px;   /* Figma 10 / 12, less the inside stroke */
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 26px;
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.cbf-icon {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.cbf-icon img { display: block; }
+
+/* Sits on the funnel's top-right shoulder: (19, 2) in the Figma state,
+   which is (9, -3) from the icon's own corner */
+/* (0,2,0), so it outranks the .cbf-icon img rule above */
+.cbf-icon .cbf-dot {
+  position: absolute;
+  left: 9px;
+  top: -3px;
+  display: none;
+}
+
+.cbf-clear {
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 100%;   /* full height, so hover only fills it — no resize */
+  padding: 0;
+  background: none;
+  border: 0;
+  /* A button does not inherit the page font by default — without this the
+     tooltip inside it set in Arial */
+  font-family: inherit;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+
+.cbf-clear-x { display: flex; }
+.cbf-clear-x img { display: block; }
+.cbf-clear-x .cbf-x-hover { display: none; }
+
+/* ── The ✕ under the pointer (Figma 5767:1127791) ──── */
+/* The zone fills with Red Ghost and the ✕ turns Outline Red, at the same
+   8.67px. Nothing changes size: the zone is already 26px by the button's
+   full height at rest, just transparent, so the button stays 94px. */
+.cbf-clear:hover,
+.cbf-clear:focus-visible {
+  background: #ffe8ea;
+  border-radius: 0 5px 5px 0;   /* nests in the button's 6px corner */
+  outline: none;
+}
+
+.cbf-clear:hover .cbf-x-rest,
+.cbf-clear:focus-visible .cbf-x-rest  { display: none; }
+.cbf-clear:hover .cbf-x-hover,
+.cbf-clear:focus-visible .cbf-x-hover { display: block; }
+
+/* "Clear n Filters" — Deep-Dark, Medium 13/22. Figma hangs it 1px below the
+   button and 4.97% of the 26px zone (1.29px) left of it; the zone stops 1px
+   short of the button's edge inside the border, hence 2px down here. */
+.cbf-tip {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: -1px;
+  z-index: 30;
+  display: none;
+  padding: 3px 15px;
+  background: #101523;
+  border-radius: 6px;
+  box-shadow: 0 4px 4px rgba(16, 21, 35, 0.3);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 22px;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Spans the gap above it, so the pointer can travel onto the tooltip and
+   click it without passing through a strip that drops the hover */
+.cbf-tip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: 2px;
+}
+
+.cbf-clear:hover .cbf-tip,
+.cbf-clear:focus-visible .cbf-tip { display: block; }
+
+/* Hover — only from rest; the other states already wear the tint */
+.cbf-btn:not(.is-open):not(.is-applied):hover {
+  background: #f2f3fa;
+  border-color: #e6eaf5;
+}
+
+.cbf-btn.is-applied:not(.is-open) {
+  background: #f2f3fa;
+  border-color: #e6eaf5;
+}
+
+.cbf-btn.is-open {
+  background: #f2f3fa;
+  border-color: transparent;
+}
+
+/* The dot and the ✕ belong to the filter being applied, not to the panel
+   being shut — so they stay while the panel is open too */
+.cbf-btn.is-applied .cbf-dot   { display: block; }
+.cbf-btn.is-applied .cbf-open  { padding-right: 4px; }
+.cbf-btn.is-applied .cbf-clear { display: flex; }
+
+/* ── The panel (Figma 5763:222578 · 5763:222359) ───── */
+/* One pixel over the button's bottom edge, as the frames have it. It hugs
+   its widest row: 591px with one row, 617px once a row carries both − and +. */
+.cbf-pop {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: max-content;
+  padding: 14px 14px 19px;   /* Figma 15 / 15 / 20, less the inside stroke */
+  background: #fff;
+  border: 1px solid var(--input-outline);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.cbf-pop[hidden] { display: none; }
+
+/* The map's own controls sit at z-index 20 in a sibling layer, so while the
+   panel is open the toolbar rises above them rather than being cut by them */
+.cb-map-toolbar.cbf-raised { z-index: 25; }
+
+.cbf-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* NXG-CRM/Headig-H4 */
+.cbf-pop-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  color: var(--text-heading);
+}
+
+/* "Close icon with Hover": white at rest, #d9e1e9 under the pointer */
+.cbf-pop-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #fff;
+  border: 0;
+  border-radius: 200px;
+  cursor: pointer;
+}
+
+.cbf-pop-close:hover { background: #d9e1e9; }
+
+/* An 8px slot the 9.5px glyph overhangs by 0.75px each way, as in Figma */
+.cbf-pop-x { position: relative; width: 8px; height: 8px; }
+.cbf-pop-x img { position: absolute; left: -0.75px; top: -0.75px; display: block; }
+
+.cbf-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.cbf-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.cbf-fields { display: flex; gap: 10px; }
+
+.cbf-w-field { width: 180px; }
+.cbf-w-op    { width: 106px; }
+.cbf-w-val   { width: 220px; }
+
+/* All Modules (Distribute Beat): Module joins the row, and every field is
+   sized down so the four fit — Figma 1406:37395 */
+.cbf-w-mod             { width: 138px; }
+.cbf-all .cbf-w-field  { width: 111px; }
+.cbf-all .cbf-w-val    { width: 145px; }
+
+/* ── A field: dropdown or input ──────────────────────── */
+.cbf-box {
+  display: flex;
+  align-items: center;
+  width: 100%;
   height: 34px;
-  padding: 0 12px 0 10px;
+  padding: 0;
   background: #fff;
   border: 1px solid var(--input-outline);
   border-radius: 6px;
   font-family: inherit;
-  font-weight: 500;
   font-size: 14px;
   color: var(--text-base);
+  text-align: left;
   cursor: pointer;
 }
 
-.cb-filter-btn i { font-size: 16px; }
+.cbf-box-text {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cbf-box-text.is-placeholder { color: var(--placeholder-date); }
+
+.cbf-box-caret { display: flex; flex-shrink: 0; padding-right: 10px; }
+.cbf-box-caret img { display: block; }
+
+.cbf-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 16px;
+  color: var(--text-base);
+}
+
+.cbf-input::placeholder { color: var(--placeholder-date); }
+
+.cbf-box[aria-expanded="true"],
+.cbf-box:focus-within { border-color: var(--btn-primary); }
+
+/* Waiting on a field: Component/Input/DisableBg and Disable-Outline */
+.cbf-box.is-disabled {
+  background: #f5f6f8;
+  border-color: #d2d9f1;
+  cursor: default;
+}
+
+.cbf-box.is-disabled .cbf-input { cursor: default; }
+
+/* A chosen field with nothing to compare it to — Icon/Primary/Negative Red */
+.cbf-box.is-invalid { border-color: #ff5d5a; }
+
+/* The page's menu, re-used for every field in the panel */
+.cbf-dd > .cb-menu {
+  max-height: 248px;
+  overflow-y: auto;
+}
+
+/* ── − and + ─────────────────────────────────────────── */
+.cbf-row-acts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.cbf-act {
+  display: flex;
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* sized up front, so the panel does not widen as the icons arrive */
+.cbf-act img { display: block; width: 16px; height: 16px; }
+
+/* ── Clear All · Apply Filter ────────────────────────── */
+/* 24px under the last row in the frame: the column's 15px gap plus 9 */
+.cbf-cta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 9px;
+}
+
+.cbf-cta[hidden] { display: none; }
+
+/* Built on .cb-btn; only the Figma fills differ from the page's own pair */
+.cb-btn.cbf-btn-default {
+  padding: 7px 19px;   /* Figma 8 / 20, less the inside stroke */
+  background: linear-gradient(to bottom, #fcfcff 1.4%, #ebeaf5);
+  border: 1px solid var(--btn-def-border);
+  box-shadow: inset 0 -2px 0 #cdd1e5;
+  line-height: normal;
+  color: var(--text-base);
+}
+
+.cb-btn.cbf-btn-primary {
+  padding: 8px 20px;
+  background: linear-gradient(to top, #3954cc, #5f7cfc);
+  box-shadow: inset 0 -2px 0 #2b42a9;
+  line-height: normal;
+  color: #fff;
+}
+
+.cb-btn.cbf-btn-default:hover,
+.cb-btn.cbf-btn-primary:not(:disabled):hover { filter: brightness(0.98); }
+
+/* Nothing different from what is applied: the page's own disabled primary,
+   the one Save wears until a rep and a duration are chosen */
+.cb-btn.cbf-btn-primary:disabled {
+  background: var(--btn-primary-dis);
+  box-shadow: none;
+  cursor: not-allowed;
+}
 
 /* Pagination */
 .cb-pagination {
   display: flex;
   align-items: center;
-  gap: 2px;
 }
 
 .cb-page-arrow {
@@ -317,9 +722,19 @@ body {
 
 .cb-page-arrow:hover { background: #f1f0f7; }
 
+/* The Figma arrow is a 30px asset drawn in a 24px slot */
+.cb-page-arrow img { display: block; width: 24px; height: 24px; }
+
+.cb-page-arrow:disabled { cursor: default; }
+.cb-page-arrow.is-mirrored img { transform: scaleX(-1); }
+.cb-page-arrow:disabled:hover { background: transparent; }
+
+/* Semibold 13 / 24, with Bold numbers and a Medium label-grey "to" */
 .cb-page-info {
   padding: 0 4px;
   font-size: 13px;
+  font-weight: 600;
+  line-height: 24px;
   color: var(--text-base);
   white-space: nowrap;
 }
@@ -342,6 +757,26 @@ body {
 }
 
 .cb-settings-btn:hover { background: #f1f0f7; }
+
+/* ── Records per Page ────────────────────────────────── */
+/* The titled menu, opened from the icon at the bar's right edge — so it
+   hangs from the right rather than the left */
+.cb-perpage > .cb-menu { left: auto; right: 0; }
+
+/* Like the Filter panel, it rises above the map's controls while open */
+.cb-map-toolbar.cb-pp-open { z-index: 25; }
+
+.cb-perpage .cb-settings-btn[aria-expanded="true"] { background: #f1f0f7; }
+
+/* icon/ richtext/ bullets, 16px: three 2px dots on the left and the lines
+   asset beside them, each where the Figma component puts it */
+.cb-bullets { position: relative; display: block; width: 16px; height: 16px; }
+.cb-bullets img { position: absolute; display: block; }
+.cb-bullets-lines { left: 5.36px; top: 3.25px; }
+.cb-bullets-dot { left: 2px; }
+.cb-bullets-dot.d1 { top: 3px; }
+.cb-bullets-dot.d2 { top: 7px; }
+.cb-bullets-dot.d3 { top: 11px; }
 
 /* ── Map canvas ───────────────────────────────────── */
 .map-area {

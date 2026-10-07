@@ -22,6 +22,7 @@
     'field-rules-spec.md',
     'planner-configuration-spec.md',
     'porting-to-ui-lib.md',
+    'record-filter-pagination-spec.md',
     'visit-types-spec.md',
   ];
 

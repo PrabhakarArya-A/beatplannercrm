@@ -56,6 +56,7 @@ class FieldMap {
       '#8b5cf6', /* accounts */
       '#f59e0b', /* deals    */
       '#3b82f6', /* leads    */
+      '#ec4899', /* vendors  */
       '#ef4444', /* preview / pick mode */
       '#9ca3af', /* fallback */
     ].forEach(color => {
@@ -87,6 +88,7 @@ class FieldMap {
       accounts: '#8b5cf6',
       deals:    '#f59e0b',
       leads:    '#3b82f6',
+      vendors:  '#ec4899',
     }[p.module.toLowerCase()] || p.color || '#9ca3af';
   }
 
@@ -101,12 +103,41 @@ class FieldMap {
     this.draw();
   }
 
-  _visiblePins() {
-    const pins = this._visiblePinsOverride || PINS;
+  /* An extra test every visible pin has to pass, on top of the module
+     filter. Create Beat's Filter sets it; nothing else does, so every other
+     page draws exactly what it always did. Pass null to lift it. */
+  setPinFilter(fn) {
+    this._pinFilter = typeof fn === 'function' ? fn : null;
+    this.draw();
+  }
+
+  /* Shows one page of the pins that pass the filters: `size` from `offset`.
+     Create Beat's pagination sets it; pass a falsy size to show them all. */
+  setPageWindow(offset, size) {
+    this._page = size ? { offset, size } : null;
+    this.draw();
+  }
+
+  /* Draws each pin in place of the default module-coloured one:
+     fn(ctx, pin, { x, tipY, scale }) with world coordinates. Distribute
+     Beat sets it for its selectable pins; pass null for the default. */
+  setPinRenderer(fn) {
+    this._pinRenderer = typeof fn === 'function' ? fn : null;
+    this.draw();
+  }
+
+  /* Every pin that passes the module and pin filters, before paging */
+  matchingPins() {
+    let pins = this._visiblePinsOverride || PINS;
     if (this._activeModules && this._activeModules.length > 0) {
-      return pins.filter(p => this._activeModules.includes(p.module.toLowerCase()));
+      pins = pins.filter(p => this._activeModules.includes(p.module.toLowerCase()));
     }
-    return pins;
+    return this._pinFilter ? pins.filter(this._pinFilter) : pins;
+  }
+
+  _visiblePins() {
+    const pins = this.matchingPins();
+    return this._page ? pins.slice(this._page.offset, this._page.offset + this._page.size) : pins;
   }
 
   resize() {
@@ -264,7 +295,8 @@ class FieldMap {
         const t = Math.min((now - this._bouncingPins.get(p)) / DURATION, 1);
         yOff = this._bounceY(t);
       }
-      this._drawSinglePin(p.x, p.y, this._colorForPin(p), yOff, false);
+      if (this._pinRenderer) this._pinRenderer(this.ctx, p, { x: p.x, tipY: p.y + yOff, scale: this.scale });
+      else this._drawSinglePin(p.x, p.y, this._colorForPin(p), yOff, false);
     });
 
     if (this.pickMode) this.ctx.globalAlpha = 1;

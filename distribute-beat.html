@@ -3,55 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Beat — Beat Planner</title>
+  <title>Distribute Beat — Beat Planner</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
   <link rel="stylesheet" href="src/style-create-beat.css" />
   <link rel="stylesheet" href="src/map-controls.css" />
+  <link rel="stylesheet" href="src/style-distribute-beat.css" />
 </head>
 <body>
   <div class="cb-app">
 
     <!-- Header -->
     <header class="cb-header">
-      <div class="cb-title">Create Beat</div>
+      <div class="cb-title">Distribute Beat Plans</div>
       <div class="cb-actions">
         <button class="cb-btn cancel" id="cb-cancel">Cancel</button>
-        <button class="cb-btn save" id="cb-save" disabled>Save</button>
+        <!-- Enabled once the beat has a name, a duration and a record -->
+        <button class="cb-btn save db-continue" id="db-continue" disabled>Continue</button>
       </div>
     </header>
 
     <!-- Body -->
     <div class="cb-body">
 
-      <!-- Left panel: Beats Information -->
-      <aside class="cb-panel">
-        <h2 class="cb-panel-title">Beats Information</h2>
+      <!-- Left panel: Beat Details (Figma 1384:56699 empty, 1406:37302 with records) -->
+      <aside class="cb-panel db-panel">
+        <h2 class="cb-panel-title">Beat Details</h2>
 
-        <div class="cb-field-row">
-          <label class="cb-field-label">Assign Rep</label>
+        <div class="cb-field-row db-name-row">
+          <label class="cb-field-label" for="db-name">Distribution Name</label>
           <div class="cb-field-control">
-            <div class="cb-input" id="cb-assign-rep" role="button" tabindex="0">
-              <span class="cb-fill cb-placeholder">Select</span>
-              <i class="ti ti-chevron-down cb-chevron" aria-hidden="true"></i>
-            </div>
+            <label class="db-input">
+              <img class="cb-strip" src="src/distribute/mandatory-strip.svg" alt="" aria-hidden="true" />
+              <input id="db-name" type="text" autocomplete="off" required />
+            </label>
           </div>
         </div>
 
         <div class="cb-field-row">
-          <label class="cb-field-label">Beat Duration</label>
+          <label class="cb-field-label" for="db-start">Beat Duration</label>
           <div class="cb-field-control">
-            <div class="cb-duration">
-              <div class="cb-input date" id="cb-start-date" role="button" tabindex="0">
-                <span class="cb-fill cb-placeholder">DD/MM/YYYY</span>
-                <i class="ti ti-calendar-event" aria-hidden="true"></i>
-              </div>
-              <div class="cb-input date" id="cb-end-date" role="button" tabindex="0">
-                <span class="cb-fill cb-placeholder">DD/MM/YYYY</span>
-                <i class="ti ti-chevron-down cb-chevron" aria-hidden="true"></i>
-              </div>
+            <div class="db-duration">
+              <label class="db-input">
+                <img class="cb-strip" src="src/distribute/mandatory-strip.svg" alt="" aria-hidden="true" />
+                <input id="db-start" class="db-date" type="text" placeholder="DD/MM/YYYY"
+                       inputmode="numeric" maxlength="10" autocomplete="off" required />
+              </label>
+              <label class="db-input">
+                <img class="cb-strip" src="src/cb-filter/field-strip.svg" alt="" aria-hidden="true" />
+                <input id="db-end" class="db-date" type="text" placeholder="DD/MM/YYYY"
+                       inputmode="numeric" maxlength="10" autocomplete="off" aria-label="End date" />
+              </label>
             </div>
           </div>
         </div>
+
+        <!-- The records picked on the map, each with its visit type -->
+        <section class="db-selected" id="db-selected" hidden>
+          <div class="db-sel-head">
+            <p class="db-sel-count">
+              <span id="db-count"></span>
+              <button class="db-link" type="button" id="db-clear">Clear</button>
+            </p>
+            <div class="cb-module-wrap db-apply" id="db-apply-wrap">
+              <button class="db-ghost" type="button" id="db-apply"
+                      aria-haspopup="listbox" aria-expanded="false">
+                <span>Apply to all</span>
+                <img src="src/distribute/caret-link.svg" alt="" aria-hidden="true" />
+              </button>
+              <!-- menu: CbMenu, the visit types -->
+            </div>
+          </div>
+          <ul class="db-list" id="db-list"></ul>
+        </section>
       </aside>
 
       <!-- Map -->
@@ -63,7 +86,7 @@
             <div class="cb-module-wrap" id="cb-module-wrap">
               <div class="cb-module-select" id="cb-module-select" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-controls="cb-module-list">
                 <img class="cb-strip" src="src/cb-filter/field-strip.svg" alt="" aria-hidden="true" />
-                <span class="cb-fill" id="cb-module-label">Contacts</span>
+                <span class="cb-fill" id="cb-module-label">All Modules</span>
                 <span class="cb-module-caret"><img src="src/cb-filter/caret.svg" alt="" aria-hidden="true" /></span>
               </div>
               <!-- menu: CbMenu, no title -->
@@ -71,7 +94,7 @@
             <!-- Filter: one control with two hit areas. The body opens the
                  panel; the ✕ appears only once a filter is applied and lifts
                  it. Built from Figma 5763:222731. -->
-            <div class="cbf" id="cbf" data-module="contacts">
+            <div class="cbf" id="cbf" data-module="all">
               <div class="cbf-btn" id="cbf-btn">
                 <button class="cbf-open" type="button" id="cbf-open"
                         aria-haspopup="dialog" aria-expanded="false" aria-controls="cbf-pop">
@@ -118,21 +141,12 @@
                 <img src="src/cb-filter/arrow-next.svg" alt="" aria-hidden="true" />
               </button>
             </div>
-            <!-- Records Per Page is the only list setting a map has — no columns
-                 to manage or text to wrap — so the icon opens straight onto its
-                 choices rather than onto a menu with one row and a flyout.
-                 icon/ richtext/ bullets: three dots and the lines, placed as the
-                 Figma component places them. -->
+            <!-- Records per Page, behind this frame's icon/ configure settings -->
             <div class="cb-module-wrap cb-perpage" id="cb-perpage">
               <button class="cb-settings-btn" id="cb-settings" type="button"
                       aria-haspopup="listbox" aria-expanded="false" aria-controls="cb-perpage-list"
                       aria-label="Records per Page: 50" title="Records per Page: 50">
-                <span class="cb-bullets" aria-hidden="true">
-                  <img class="cb-bullets-lines" src="src/cb-filter/bullets-lines.svg" alt="" />
-                  <img class="cb-bullets-dot d1" src="src/cb-filter/bullets-dot.svg" alt="" />
-                  <img class="cb-bullets-dot d2" src="src/cb-filter/bullets-dot.svg" alt="" />
-                  <img class="cb-bullets-dot d3" src="src/cb-filter/bullets-dot.svg" alt="" />
-                </span>
+                <img class="db-settings-icon" src="src/distribute/configure-settings.svg" alt="" aria-hidden="true" />
               </button>
               <!-- menu: CbMenu, titled "Records per Page" -->
             </div>
@@ -171,45 +185,7 @@
   <script src="src/create-beat-records.js"></script>
   <script src="src/cb-menu.js"></script>
   <script src="src/cb-toolbar.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const fieldMap = new FieldMap('map-canvas', 'map-area');
-      /* Create Beat's own records — enough per module to page through */
-      fieldMap._visiblePinsOverride = CB_RECORDS;
-      fieldMap.resize();
-      /* The toolbar's Filter narrows the same map — see create-beat-filter.js */
-      window.cbMap = fieldMap;
-
-      /* Zoom controls */
-      document.getElementById('zoom-in').addEventListener('click', () => {
-        fieldMap.zoom(1.25, fieldMap.canvas.width / 2, fieldMap.canvas.height / 2);
-      });
-      document.getElementById('zoom-out').addEventListener('click', () => {
-        fieldMap.zoom(0.8, fieldMap.canvas.width / 2, fieldMap.canvas.height / 2);
-      });
-
-      /* Enable Save only once both a rep and a duration are chosen (placeholder logic) */
-      const saveBtn = document.getElementById('cb-save');
-      window.cbRefreshSave = () => {
-        const repChosen   = !document.querySelector('#cb-assign-rep .cb-placeholder');
-        const startChosen = !document.querySelector('#cb-start-date .cb-placeholder');
-        const enabled = repChosen && startChosen;
-        saveBtn.classList.toggle('enabled', enabled);
-        saveBtn.disabled = !enabled;
-      };
-
-      /* Module menu, pagination and Records per Page — see cb-toolbar.js */
-      CbToolbar.init(fieldMap, {
-        modules: [['leads', 'Leads'], ['contacts', 'Contacts'], ['deals', 'Deals'], ['vendors', 'Vendors']],
-        selected: 'contacts',
-      });
-
-      /* Cancel returns to the field view */
-      document.getElementById('cb-cancel').addEventListener('click', () => {
-        window.location.href = 'non-map.html';
-      });
-    });
-  </script>
+  <script src="src/distribute-beat.js"></script>
   <script src="src/create-beat-filter.js"></script>
 </body>
 </html>
