@@ -8,8 +8,8 @@
      2. The panel lists one card per unassigned visit: what it is, when
         it is due, and why it could not be placed automatically.
      3. Picking a Rep opens the Beat select — the beats offered are that
-        rep's — and answering both arms Resolve.
-     4. Resolving drops the card, decrements both counts and offers Undo
+        rep's — and answering both arms Assign.
+     4. Assigning drops the card, decrements both counts and offers Undo
         for as long as the message box is up.
      5. Filter narrows the list by date, related record or reason. The
         heading keeps counting everything pending, not the filtered set.
@@ -18,17 +18,24 @@
 
   /* ── Data ──────────────────────────────────────────── */
   const BEATS = [
-    { id: 'BP - 001', rep: 'Savannah Nguyen',   status: 'Upcoming',            dates: '12 May - 15 May', visits: 6, mileage: '42.1 km', created: '31/02/2026' },
-    { id: 'BP - 002', rep: 'Kathryn Murphy',    status: 'Upcoming',            dates: '5 May - 7 May',   visits: 2, mileage: '18.7 km', created: '08/09/2026' },
-    { id: 'BP - 003', rep: 'Cameron Williamson', status: 'Upcoming',           dates: '4 May - 5 May',   visits: 6, mileage: '75.6 km', created: '06/07/2026' },
-    { id: 'BP - 004', rep: 'Cody Fisher',       status: 'Partially Completed', dates: '7 Apr - 9 Apr',   visits: 4, mileage: '25.5 km', created: '13/01/2026' },
-    { id: 'BP - 005', rep: 'Cameron Williamson', status: 'Completed',          dates: '8 Apr - 15 Apr',  visits: 8, mileage: '31.4 km', created: '24/12/2026' },
-    { id: 'BP - 006', rep: 'Devon Lane',        status: 'In Progress',         dates: '13 Apr',          visits: 3, mileage: '51.9 km', created: '19/10/2026' },
-    { id: 'BP - 007', rep: 'Jenny Wilson',      status: 'Completed',           dates: '12 May - 14 May', visits: 3, mileage: '9.3 km',  created: '30/04/2026' },
-    { id: 'BP - 008', rep: 'Annette Black',     status: 'In Progress',         dates: '14 Apr - 16 Apr', visits: 2, mileage: '68.2 km', created: '15/05/2026' },
+    { id: 'BP-001', rep: 'Savannah Nguyen',   status: 'Upcoming',            dates: '12 May - 15 May', visits: 6, mileage: '42.1 km', created: '31/02/2026' },
+    { id: 'BP-002', rep: 'Kathryn Murphy',    status: 'Upcoming',            dates: '5 May - 7 May',   visits: 2, mileage: '18.7 km', created: '08/09/2026' },
+    { id: 'BP-003', rep: 'Cameron Williamson', status: 'Upcoming',           dates: '4 May - 5 May',   visits: 6, mileage: '75.6 km', created: '06/07/2026' },
+    { id: 'BP-004', rep: 'Cody Fisher',       status: 'Partially Completed', dates: '7 Apr - 9 Apr',   visits: 4, mileage: '25.5 km', created: '13/01/2026' },
+    { id: 'BP-005', rep: 'Cameron Williamson', status: 'Completed',          dates: '8 Apr - 15 Apr',  visits: 8, mileage: '31.4 km', created: '24/12/2026' },
+    { id: 'BP-006', rep: 'Devon Lane',        status: 'In Progress',         dates: '13 Apr',          visits: 3, mileage: '51.9 km', created: '19/10/2026' },
+    { id: 'BP-007', rep: 'Jenny Wilson',      status: 'Completed',           dates: '12 May - 14 May', visits: 3, mileage: '9.3 km',  created: '30/04/2026' },
+    { id: 'BP-008', rep: 'Annette Black',     status: 'In Progress',         dates: '14 Apr - 16 Apr', visits: 2, mileage: '68.2 km', created: '15/05/2026' },
   ];
 
   const REPS = [...new Set(BEATS.map(b => b.rep))];
+
+  /* Card warnings name the limit, then the next step. The short label stays
+     the filter value. */
+  const REASON_COPY = {
+    'Beat capacity reached': 'Beat capacity reached. Assign to another rep or day.',
+    'Maximum distance reached': 'Maximum distance reached. Assign to another rep or day.',
+  };
 
   const PILL = {
     'Upcoming': 'upcoming',
@@ -62,7 +69,7 @@
   /* Working copy — each row carries the rep and beat chosen so far */
   let rows = PENDING.map((p, i) => ({ ...p, key: i, rep: '', beat: '' }));
 
-  /* What the last Resolve removed, so Undo can put it back where it was */
+  /* What the last Assign removed, so Undo can put it back where it was */
   let undoable = null;
 
   /* Dismissing the band is the rep's decision — an Undo must not undo it */
@@ -149,7 +156,7 @@
           ${row.reasons.map(reason => `
             <span class="pa-note">
               <img src="src/pa-warn-line.svg" alt="" aria-hidden="true" />
-              <span>${escape(reason)}</span>
+              <span>${escape(REASON_COPY[reason] || reason)}</span>
             </span>`).join('')}
         </div>
 
@@ -168,7 +175,7 @@
           </div>
         </div>
 
-        <button class="pa-resolve" type="button" ${ready ? '' : 'disabled'}>Resolve</button>
+        <button class="pa-resolve" type="button" ${ready ? '' : 'disabled'}>Assign</button>
       </article>`;
   }
 
@@ -178,14 +185,16 @@
     cardsEl.innerHTML = list.length
       ? list.map(cardHtml).join('')
       : `<p class="pa-empty">${rows.length
-           ? 'No visits match these filters'
-           : 'No pending assignment records'}</p>`;
+           ? 'No visits match these filters.'
+           : 'No visits pending assignment.'}</p>`;
   }
 
   function renderCounts() {
     const n = rows.length;
-    panelSub.textContent = `${plural(n, 'visit')} awaiting assignment`;
-    bandCount.textContent = plural(n, 'visit');
+    panelSub.textContent = n
+      ? `${plural(n, 'visit')} waiting to be assigned`
+      : 'No visits pending assignment';
+    bandCount.textContent = `${plural(n, 'visit')} pending assignment.`;
     /* Nothing pending, nothing to announce */
     band.hidden = !n || bandDismissed;
   }
@@ -240,16 +249,20 @@
     const card = e.target.closest('.pa-card');
     const key = Number(card.dataset.key);
     const index = rows.findIndex(r => r.key === key);
-    undoable = { index, row: rows[index] };
+    const row = rows[index];
+    undoable = { index, row };
     rows.splice(index, 1);
     render();
-    showMessage();
+    showMessage(row);
   });
 
   /* ── Message box with Undo ─────────────────────────── */
   let msgTimer = null;
 
-  function showMessage() {
+  function showMessage(row) {
+    const beatId = String(row.beat).split(' • ')[0];
+    $('pa-msg-label').textContent =
+      `${row.title} assigned to ${row.rep} in ${beatId}.`;
     msgEl.hidden = false;
     clearTimeout(msgTimer);
     /* Undo lives exactly as long as the message does */

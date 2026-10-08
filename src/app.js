@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fieldMap.startPinBounce(newPin);
     updateModuleCounts();
 
-    showToast(`Mapped Location for "${savedName}" Successfully`);
+    showToast(`Location updated for ${savedName}.`);
   });
 
   /* Cancel confirm → hide popup, clear preview pin, restore pointer cursor */
@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lngVal = document.getElementById('field-lng').value.trim();
 
     if (!flat && !street && !city && !zip && !latVal && !lngVal) {
-      showToast('Please fill in at least one field before saving.', 'error');
+      showToast('Enter an address or coordinates before saving.', 'error');
       return;
     }
 
@@ -728,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else renderNmList();
 
     /* Show toast */
-    showToast(`Mapped Location for "${savedName}" Successfully`);
+    showToast(`Location updated for ${savedName}.`);
   });
 
   /* ── Update module dropdown counts after removal ── */

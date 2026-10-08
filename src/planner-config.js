@@ -52,7 +52,7 @@
         fields: MULTILINE_FIELDS,
         /* One line under the field, instruction and example together. Kept
            inside the ~57 characters that fit the 390px column on one line. */
-        hint: 'Whole address in one field, e.g. 6800 Burleson Rd, Austin',
+        hint: 'Whole address in one field, e.g. 12 MG Road, Bengaluru',
       },
     ],
   };
@@ -64,7 +64,9 @@
   const VALUELESS = new Set(['is empty', 'is not empty']);
 
   const MESSAGES = {
-    empty: 'Field cannot be empty.',
+    module: 'Select a module.',
+    fullAddress: 'Select the field that holds the full address.',
+    criteria: 'Add at least one condition for specific records.',
   };
 
   const modulesEl = document.getElementById('pc-modules');
@@ -120,7 +122,7 @@
 
   function summaryHtml(row) {
     if (row.scope !== 'specific' || !row.criteria.length) {
-      return '<span class="pc-mod-cell">All Records</span>';
+      return '<span class="pc-mod-cell">All records</span>';
     }
     const lines = row.criteria.map((c, i) => `
       <span class="pc-summary-line">
@@ -142,7 +144,7 @@
     modRowsEl.innerHTML = rows.map((row, i) => `
       <div class="pc-mod-tr pc-mod-row" data-index="${i}">
         <span class="pc-mod-actions">
-          <button class="pc-mod-act" type="button" data-act="delete" aria-label="Delete mapping">
+          <button class="pc-mod-act" type="button" data-act="delete" aria-label="Remove module">
             <i class="ti ti-x" aria-hidden="true"></i>
           </button>
           <button class="pc-mod-act" type="button" data-act="edit" aria-label="Edit mapping">
@@ -168,18 +170,61 @@
     const btn = e.target.closest('.pc-mod-act');
     if (!btn) return;
     const index = Number(btn.closest('.pc-mod-row').dataset.index);
-    if (btn.dataset.act === 'delete') { rows.splice(index, 1); renderModules(); }
+    if (btn.dataset.act === 'delete') openRemove(index);
     else PCModuleModal.open(index);
   });
 
+  /* PC-19 / PC-20: removing a mapped module asks first, then confirms. */
+  const removeOverlay = document.getElementById('pc-remove-overlay');
+  let removingIndex = null;
+
+  function openRemove(index) {
+    removingIndex = index;
+    document.getElementById('pc-remove-title').textContent =
+      `Remove the ${rows[index].module} module?`;
+    removeOverlay.classList.add('show');
+    removeOverlay.setAttribute('aria-hidden', 'false');
+    document.getElementById('pc-remove-confirm').focus();
+  }
+
+  function closeRemove() {
+    removingIndex = null;
+    removeOverlay.classList.remove('show');
+    removeOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  document.getElementById('pc-remove-cancel').addEventListener('click', closeRemove);
+  removeOverlay.addEventListener('click', e => { if (e.target === removeOverlay) closeRemove(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && removeOverlay.classList.contains('show')) closeRemove();
+  });
+  document.getElementById('pc-remove-confirm').addEventListener('click', () => {
+    if (removingIndex === null) return;
+    const name = rows[removingIndex].module;
+    rows.splice(removingIndex, 1);
+    closeRemove();
+    renderModules();
+    toast(`${name} module removed.`);
+  });
+
   /* ── Footer ────────────────────────────────────────── */
-  nextBtn.addEventListener('click', () => {
+  function plannerNameMissing() {
     const name = document.getElementById('pc-planner-name');
-    if (!name.value.trim()) { name.focus(); toast('Planner name cannot be empty.'); return; }
+    if (name.value.trim()) return false;
+    name.focus();
+    toast('Enter a planner name.');
+    return true;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (plannerNameMissing()) return;
     window.location.href = 'visit-types.html';
   });
 
-  document.getElementById('pc-draft').addEventListener('click', () => toast('Saved as draft.'));
+  document.getElementById('pc-draft').addEventListener('click', () => {
+    if (plannerNameMissing()) return;
+    toast('Planner Configuration saved as draft.');
+  });
   document.getElementById('pc-cancel').addEventListener('click', () => { window.location.href = 'index.html'; });
 
   renderModules();

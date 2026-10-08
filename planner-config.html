@@ -90,7 +90,7 @@
                 <img src="src/model-bottomup.svg" alt="" aria-hidden="true" />
                 <span class="pc-model-text">
                   <span class="pc-model-title">Bottom Up</span>
-                  <span class="pc-model-desc">Reps creates beats, with or without manager approval</span>
+                  <span class="pc-model-desc">Reps create beats, with or without manager approval</span>
                 </span>
                 <img src="src/model-selected-check.svg" class="pc-model-check" alt="" aria-hidden="true" />
               </button>
@@ -103,8 +103,7 @@
             <button class="pc-link-btn" type="button" id="pc-add-module-link" hidden>Add Module</button>
           </div>
           <p class="pc-section-desc">
-            Select modules and map the Address Fields for plotting the records on map. Only the
-            records with right address information will be fetched in Beat Planner.
+            Choose which CRM modules can be planned as visits, and map their address fields for the map. Only records with a complete address show in Beat Planner.
           </p>
 
           <button class="pc-btn outline-blue" type="button" id="pc-add-module-btn">Add Module</button>
@@ -147,6 +146,22 @@
       <footer class="mb-foot">
         <button class="pc-btn default" type="button" id="mb-cancel">Cancel</button>
         <button class="pc-btn primary" type="button" id="mb-save">Done</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- PC-19: remove a mapped module -->
+  <div class="pc-overlay" id="pc-remove-overlay" aria-hidden="true">
+    <div class="pc-confirm" role="dialog" aria-modal="true" aria-labelledby="pc-remove-title">
+      <header class="mb-head">
+        <h2 class="mb-title" id="pc-remove-title">Remove the module?</h2>
+      </header>
+      <div class="mb-body">
+        <p class="mb-sub">You will not be able to create new Visits for records in this module. Existing Visits stay on Beats already created.</p>
+      </div>
+      <footer class="mb-foot">
+        <button class="pc-btn default" type="button" id="pc-remove-cancel">Cancel</button>
+        <button class="pc-btn primary" type="button" id="pc-remove-confirm">Remove</button>
       </footer>
     </div>
   </div>

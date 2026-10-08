@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = [...picked];
     const n = list.length;
     $('db-selected').hidden = n === 0;
-    $('db-count').textContent = `${n} Record${n === 1 ? '' : 's'} selected`;
+    $('db-count').textContent = `${n} selected`;
     listEl.innerHTML = list.map(([pin, type], i) => rowHtml(pin, type, i)).join('');
     fieldMap.draw();
     refreshContinue();

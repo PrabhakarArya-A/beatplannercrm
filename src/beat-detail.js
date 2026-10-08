@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
       band.className = 'bp-status-band bp-band-waiting';
       bandIcon.className = 'ti ti-clock-play';
       bandText.textContent =
-        `${DAYS[running].label} is running — started at ${DAYS[running].startedAt}.`;
+        `${DAYS[running].label} is running. Started at ${DAYS[running].startedAt}.`;
       return;
     }
     if (DAYS.every(d => d.status === 'done')) {
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
       bandIcon.className = 'ti ti-circle-check';
       const total = DAYS.reduce((n, d) => n + d.visits.length, 0);
       const done = DAYS.reduce((n, d) => n + d.visits.filter(v => v.status === 'done').length, 0);
-      bandText.textContent = `Beat completed — ${DAYS.length} days logged, ${done} of ${total} visits done.`;
+      bandText.textContent = `Beat completed. ${DAYS.length} days logged, ${done} of ${total} visits done.`;
       return;
     }
     band.hidden = true;
@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
     expanded = true;
     render();
     revealDay(i);
-    toast(`${DAYS[i].label} started at ${DAYS[i].startedAt}.`);
+    toast(`BP-003, ${DAYS[i].label} started at ${DAYS[i].startedAt}.`);
   }
 
   function endDay(i) {
@@ -391,9 +391,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const next = DAYS.findIndex(d => d.status === 'pending');
     if (next !== -1) { selectedDay = next; expanded = true; }
     render();
+    const missed = `${left.length} ${left.length === 1 ? 'visit' : 'visits'}`;
     toast(left.length
-      ? `${day.label} ended — ${left.length} visit${left.length === 1 ? '' : 's'} marked missed.`
-      : `${day.label} ended at ${day.endedAt}.`);
+      ? `BP-003, ${day.label} ended with ${missed} marked Missed.`
+      : `BP-003, ${day.label} ended at ${day.endedAt}.`);
   }
 
   /* Acting from the toolbar means the day the rep just opened may be far
@@ -439,12 +440,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const planned = day.visits.reduce((n, v) => n + kmOf(v), 0);
     const first = day.visits[0];
 
-    $('bd-start-title').textContent = `Start ${day.label} ?`;
+    $('bd-start-title').textContent = `Start ${day.label}?`;
+    $('bd-start-confirm').textContent = `Start ${day.label}`;
     $('bd-start-sub').innerHTML =
       `${escape(day.label)} • ${escape(day.date)}&nbsp;&nbsp;${day.visits.length} visits planned`;
     $('bd-start-visits').textContent = String(day.visits.length);
     $('bd-start-km').textContent = `${planned.toFixed(1)} km`;
-    $('bd-start-first').textContent = first ? first.name : '—';
+    $('bd-start-first').textContent = first ? first.name : 'None';
     $('bd-start-clock').textContent = clock();
 
     startOverlay.hidden = false;
@@ -474,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let endingDay = null;
 
   function elapsed(day) {
-    if (!day.startedTs) return '—';
+    if (!day.startedTs) return 'None';
     const mins = Math.max(1, Math.round((Date.now() - day.startedTs) / 60000));
     return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`;
   }
@@ -488,7 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
        rep reached */
     const km = done.reduce((n, v) => n + kmOf(v), 0);
 
-    $('bd-end-title').textContent = `End ${day.label} ?`;
+    $('bd-end-title').textContent = `End ${day.label}?`;
+    $('bd-end-confirm').textContent = `End ${day.label}`;
     $('bd-end-sub').innerHTML =
       `${escape(day.label)} • ${escape(day.date)}&nbsp;&nbsp;Started ${escape(day.startedAt)}`;
     $('bd-sum-done').textContent = `${done.length} of ${day.visits.length}`;
@@ -628,6 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   avRecord.addEventListener('change', () => setMsg(avRecord, ''));
+  avTime.addEventListener('change', () => setMsg(avTime, ''));
 
   avPic.addEventListener('change', () => {
     const file = avPic.files[0];
@@ -645,10 +649,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('av-add').addEventListener('click', () => {
     let ok = true;
-    if (!avRecord.value) { setMsg(avRecord, 'Select a record.'); ok = false; }
-    if (!avType.value)   { setMsg(avType, 'Select a visit type.'); ok = false; }
+    setMsg(avRecord, '');
+    setMsg(avType, '');
+    setMsg(avTime, '');
+    if (!avRecord.value) { setMsg(avRecord, 'Select a module and record.'); ok = false; }
+    if (!avType.value) { setMsg(avType, 'Select a visit type.'); ok = false; }
+    else if (!avTime.value) { setMsg(avTime, 'Select a visit time.'); ok = false; }
     if (!ok) return;
 
+    const visitName = avRecord.value;
     const day = DAYS[addingTo];
     const start = avTime.value;
     /* Fifteen minutes is what the other visits on these beats run to */
@@ -675,7 +684,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeAddVisit();
     render();
-    toast(`${avRecord.value} added to ${day.label}.`);
+    const beatId = document.querySelector('.bp-code').textContent.trim();
+    toast(`${visitName} added to ${beatId} on ${day.date}.`);
   });
 
   /* ── Route map ─────────────────────────────────────── */

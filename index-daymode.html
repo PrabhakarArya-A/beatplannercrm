@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Field View — Day Mode (WCAG)</title>
+  <title>Field View - Day Mode (WCAG)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
   <link rel="stylesheet" href="src/style-daymode.css" />
 </head>
@@ -80,7 +80,7 @@
         <div class="map-topbar">
           <button class="warn-badge" id="non-mappable-btn" aria-haspopup="true" aria-expanded="false">
             <span class="warn-icon">⚠</span>
-            <span class="warn-label">Non Mappable Records</span>
+            <span class="warn-label">Records that cannot be mapped</span>
           </button>
           <div class="module-select" id="module-select" aria-expanded="false">
             <span id="module-label">All Modules</span>
@@ -109,12 +109,12 @@
         <div class="map-area" id="map-area">
           <canvas id="map-canvas" aria-label="Interactive field map"></canvas>
 
-          <!-- Non Mappable Records Sheet (V1) -->
-          <div class="nm-sheet" id="nm-sheet" role="dialog" aria-label="Non Mappable Records" aria-hidden="true">
+          <!-- Records that cannot be mapped Sheet (V1) -->
+          <div class="nm-sheet" id="nm-sheet" role="dialog" aria-label="Records that cannot be mapped" aria-hidden="true">
             <div class="nm-header">
               <div class="nm-title">
                 <span class="warn-icon">⚠</span>
-                <span>Non Mappable Records</span>
+                <span>Records that cannot be mapped</span>
               </div>
               <button class="nm-close" id="nm-close" aria-label="Close">
                 <i class="ti ti-x" aria-hidden="true"></i>
@@ -147,12 +147,12 @@
             <ul class="nm-list" id="nm-list"></ul>
           </div>
 
-          <!-- Non Mappable Records Sheet (V2) -->
-          <div class="nm-sheet nm-sheet-v2" id="nm-sheet-v2" role="dialog" aria-label="Non Mappable Records" aria-hidden="true">
+          <!-- Records that cannot be mapped Sheet (V2) -->
+          <div class="nm-sheet nm-sheet-v2" id="nm-sheet-v2" role="dialog" aria-label="Records that cannot be mapped" aria-hidden="true">
             <div class="nm-header">
               <div class="nm-title">
                 <span class="warn-icon">⚠</span>
-                <span>Non Mappable Records</span>
+                <span>Records that cannot be mapped</span>
                 <span class="nm-count-badge" id="nm-v2-count">89</span>
               </div>
               <button class="nm-close" id="nm-close-v2" aria-label="Close">
@@ -173,7 +173,7 @@
           <!-- Pick Mode Banner -->
           <div class="pick-banner" id="pick-banner" aria-hidden="true">
             <span class="pick-banner-icon"><i class="ti ti-info-circle" aria-hidden="true"></i></span>
-            <span>Click on Map to select a Location</span>
+            <span>Click the map to set the new location.</span>
             <button class="pick-banner-close" id="pick-banner-close" aria-label="Exit pick mode">
               <i class="ti ti-x" aria-hidden="true"></i>
             </button>
@@ -181,11 +181,11 @@
 
           <!-- Pick Confirm Popup -->
           <div class="pick-confirm" id="pick-confirm" aria-hidden="true" role="dialog">
-            <p class="pick-confirm-title">Do you want to update this record's location?</p>
-            <p class="pick-confirm-desc">This will set the record's address coordinates with the selected location coordinates for <strong id="pick-confirm-name"></strong></p>
+            <p class="pick-confirm-title">Update the location for this record?</p>
+            <p class="pick-confirm-desc">This sets the address to the location you picked for <strong id="pick-confirm-name"></strong>.</p>
             <div class="pick-confirm-btns">
               <button class="pick-btn cancel" id="pick-cancel-btn">Cancel</button>
-              <button class="pick-btn confirm" id="pick-confirm-btn">Confirm</button>
+              <button class="pick-btn confirm" id="pick-confirm-btn">Update Location</button>
             </div>
           </div>
 

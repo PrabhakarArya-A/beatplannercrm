@@ -15,10 +15,9 @@
   const DEFAULT_DURATION = '15';
 
   const MESSAGES = {
-    emptyName:     'Field cannot be empty.',
-    emptyDuration: 'Field cannot be empty.',
-    duplicateName: 'Visit type already exists.',
-    zeroDuration:  'Duration must be above 0.',
+    emptyName:     'Enter a visit type name.',
+    emptyDuration: 'Enter a duration in minutes.',
+    zeroDuration:  'Enter a duration of at least 1 minute.',
   };
 
   const rowsEl = document.getElementById('pc-rows');
@@ -104,7 +103,10 @@
     /* Names in the other rows, so a repeat is caught before a row is added */
     const seen = new Map([...rowsEl.children]
       .filter(other => other !== tr)
-      .map(other => [other.querySelector('.pc-name').value.trim().toLowerCase(), true]));
+      .map(other => {
+        const value = other.querySelector('.pc-name').value.trim();
+        return [value.toLowerCase(), value];
+      }));
     errors.clear(name);
     if (!checkName(name, seen)) { errors.retarget(); return; }
     addRow(null, tr).querySelector('.pc-name').focus();
@@ -123,8 +125,11 @@
     const value = name.value.trim();
     const key = value.toLowerCase();
     if (!value) { errors.set(name, MESSAGES.emptyName); return false; }
-    if (seen.has(key)) { errors.set(name, MESSAGES.duplicateName); return false; }
-    seen.set(key, true);
+    if (seen.has(key)) {
+      errors.set(name, `${seen.get(key)} already exists, so enter a different name.`);
+      return false;
+    }
+    seen.set(key, value);
     return true;
   }
 
@@ -144,10 +149,17 @@
   }
 
   document.getElementById('pc-next').addEventListener('click', () => {
-    if (validate()) toast(`${rowsEl.children.length} visit type(s) saved — next: Beat Engine.`);
+    /* A valid step moves on with no toast. There is no Beat Engine screen
+       in this prototype, so Next stays on this step once the fields are valid. */
+    if (!validate()) {
+      toast('The Visit Types step has missing details. Fix the highlighted fields to continue.');
+    }
   });
 
-  document.getElementById('pc-draft').addEventListener('click', () => toast('Saved as draft.'));
+  document.getElementById('pc-draft').addEventListener('click', () => {
+    if (!validate()) return;
+    toast('Visit Types saved as draft.');
+  });
   document.getElementById('pc-previous').addEventListener('click', () => { window.location.href = 'planner-config.html'; });
   document.getElementById('pc-cancel').addEventListener('click', () => { window.location.href = 'index.html'; });
 
