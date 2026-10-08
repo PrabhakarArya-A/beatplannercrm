@@ -57,26 +57,118 @@ document.addEventListener('DOMContentLoaded', () => {
       .filter(cb => cb.checked).map(cb => cb.value);
   }
 
-  function updateModuleLabel() {
-    const checked = getCheckedModules();
-    if (checked.length === 0) {
-      moduleLabel.textContent = 'All Modules';
-      moduleSelect.classList.remove('active-filter');
-      moduleClearBtn.style.visibility = 'hidden';
-    } else {
-      moduleLabel.textContent = `Modules(${checked.length})`;
-      moduleSelect.classList.add('active-filter');
-      moduleClearBtn.style.visibility = 'visible';
+  /* Field View's label (non-map.html) lists the picked modules; Day Mode
+     keeps the older "Modules(n)" label, having no .ms-names in its markup */
+  const moduleNames   = moduleLabel.querySelector('.ms-names');
+  const moduleMore    = moduleLabel.querySelector('.ms-more');
+  const moduleTrigger = document.getElementById('module-trigger');
+  const moduleTip     = document.getElementById('module-tip');
+  let moduleCut = false;   /* the label is not showing every picked name */
+  const LABEL_MAX = 220;   /* the dropdown's widest, caret and padding included */
+
+  const moduleName = cb => cb.closest('label').textContent.trim();
+
+  /* Comma list in the panel's order. Once it outgrows the dropdown, the
+     names that would not show at all fold into "& n more" and the last one
+     that does show is cut with an ellipsis. */
+  function renderModuleNames(names) {
+    moduleMore.hidden = true;
+    moduleCut = false;
+    moduleNames.textContent = names.length ? names.join(', ') : 'All Modules';
+    if (names.length < 2) return;
+
+    /* room for the names: the cap, less the trigger's strip and caret and
+       the label's own padding */
+    const ls = getComputedStyle(moduleLabel);
+    const chrome = moduleTrigger.getBoundingClientRect().width - moduleLabel.getBoundingClientRect().width
+      + parseFloat(ls.paddingLeft) + parseFloat(ls.paddingRight);
+    const room = LABEL_MAX - chrome;
+    const ctx = renderModuleNames.ctx || (renderModuleNames.ctx = document.createElement('canvas').getContext('2d'));
+    ctx.font = getComputedStyle(moduleNames).font;
+    const w = t => ctx.measureText(t).width;
+    if (w(names.join(', ')) <= room) return;
+    moduleCut = true;
+
+    /* A name counts as shown when at least its first letter and the
+       ellipsis fit. Settle n against the width "& n more" takes. */
+    let hidden = 0;
+    for (let pass = 0; pass < 4; pass++) {
+      let moreW = 0;
+      if (hidden) {
+        moduleMore.textContent = `& ${hidden} More`;
+        moduleMore.hidden = false;
+        moreW = moduleMore.getBoundingClientRect().width
+          + parseFloat(getComputedStyle(moduleMore).marginLeft);
+      }
+      const avail = room - moreW;
+      let shown = 0;
+      names.forEach((name, i) => {
+        const before = names.slice(0, i).join(', ') + (i ? ', ' : '');
+        if (w(before + name[0] + '…') <= avail) shown = i + 1;
+      });
+      const next = names.length - Math.max(shown, 1);
+      if (next === hidden) break;
+      hidden = next;
     }
+
+    moduleMore.hidden = hidden === 0;
+    moduleMore.textContent = `& ${hidden} More`;
+    moduleNames.textContent = names.slice(0, names.length - hidden).join(', ');
+  }
+
+  function updateModuleLabel() {
+    const boxes = [...moduleChecklist.querySelectorAll('input[type=checkbox]')].filter(cb => cb.checked);
+    const checked = boxes.map(cb => cb.value);
+    if (moduleNames) {
+      renderModuleNames(boxes.map(moduleName));
+      moduleTip.querySelector('ul').innerHTML = boxes
+        .map(cb => `<li>${moduleName(cb).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</li>`)
+        .join('');
+      if (!moduleCut) hideModuleTip();
+    } else {
+      moduleLabel.textContent = checked.length ? `Modules(${checked.length})` : 'All Modules';
+    }
+    moduleSelect.classList.toggle('active-filter', checked.length > 0);
+    moduleClearBtn.style.visibility = checked.length ? 'visible' : 'hidden';
     fieldMap.setModules(checked);
+  }
+
+  /* Hovering a cut-short label lists every picked module (Figma
+     5877:1037925). It waits a moment before showing, so passing over the
+     dropdown does not flash it, and it opens in one fixed spot — where
+     the frame puts it, 86px in — rather than following the pointer. */
+  const TIP_DELAY = 500;
+  let tipTimer = null;
+
+  function hideModuleTip() {
+    clearTimeout(tipTimer);
+    if (moduleTip) moduleTip.hidden = true;
+  }
+
+  if (moduleTip) {
+    moduleTrigger.addEventListener('mouseenter', () => {
+      if (!moduleCut || moduleSelect.classList.contains('open')) return;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(() => {
+        if (moduleCut && !moduleSelect.classList.contains('open')) moduleTip.hidden = false;
+      }, TIP_DELAY);
+    });
+    moduleTrigger.addEventListener('mouseleave', hideModuleTip);
+  }
+
+  function setModuleOpen(open) {
+    /* the panel covers where the tooltip would be */
+    if (open) hideModuleTip();
+    moduleSelect.classList.toggle('open', open);
+    moduleSelect.setAttribute('aria-expanded', open);
+    if (moduleTrigger) moduleTrigger.setAttribute('aria-expanded', open);
   }
 
   moduleSelect.addEventListener('click', e => {
     if (e.target.closest('.module-panel')) return;
     e.stopPropagation();
     closeAllDropdowns(moduleSelect);
-    moduleSelect.classList.toggle('open');
-    moduleSelect.setAttribute('aria-expanded', moduleSelect.classList.contains('open'));
+    setModuleOpen(!moduleSelect.classList.contains('open'));
   });
 
   moduleChecklist.addEventListener('change', () => updateModuleLabel());
@@ -85,14 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     moduleChecklist.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
     updateModuleLabel();
-    moduleSelect.classList.remove('open');
-    moduleSelect.setAttribute('aria-expanded', 'false');
+    setModuleOpen(false);
   });
 
   modulePanelClose.addEventListener('click', e => {
     e.stopPropagation();
-    moduleSelect.classList.remove('open');
-    moduleSelect.setAttribute('aria-expanded', 'false');
+    setModuleOpen(false);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !moduleSelect.classList.contains('open')) return;
+    setModuleOpen(false);
+    if (moduleTrigger) moduleTrigger.focus();
   });
 
   modulePanel.addEventListener('click', e => e.stopPropagation());
@@ -136,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [moduleSelect, nmModuleSel, nmStatusSel].forEach(el => {
       if (el && el !== except) el.classList.remove('open');
     });
+    if (except !== moduleSelect) setModuleOpen(false);
   }
   document.addEventListener('click', () => closeAllDropdowns(null));
 

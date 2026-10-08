@@ -43,24 +43,37 @@
 
         <!-- Map Top Bar -->
         <div class="map-topbar">
+          <!-- Module filter — Figma 1342:71323 (closed) / 1342:72617 (open).
+               Picked modules read as a comma list; past 220px the list is
+               cut with an ellipsis and closed with "& n more". -->
           <div class="module-select" id="module-select" aria-expanded="false">
-            <span id="module-label">All Modules</span>
-            <i class="ti ti-chevron-down" aria-hidden="true"></i>
-            <div class="module-panel" id="module-panel">
+            <button class="ms-trigger" id="module-trigger" type="button"
+                    aria-haspopup="dialog" aria-expanded="false" aria-controls="module-panel"
+                    aria-describedby="module-tip">
+              <img class="ms-strip" src="src/cb-filter/field-strip.svg" alt="" aria-hidden="true" />
+              <span class="ms-label" id="module-label"><span class="ms-names">All Modules</span><span class="ms-more" hidden></span></span>
+              <span class="ms-caret"><img src="src/cb-filter/caret.svg" alt="" aria-hidden="true" /></span>
+            </button>
+            <!-- Every picked module, when the label cannot show them all -->
+            <div class="ms-tip" id="module-tip" role="tooltip" hidden><ul></ul></div>
+            <div class="module-panel" id="module-panel" role="dialog" aria-labelledby="module-panel-title">
               <div class="module-panel-header">
-                <span class="module-panel-title">Filter by Modules</span>
-                <div class="module-panel-actions">
-                  <button class="module-clear-btn" id="module-clear-btn" type="button" style="visibility:hidden">Clear filter</button>
-                  <button class="module-panel-close" id="module-panel-close" type="button" aria-label="Close">
-                    <i class="ti ti-x" aria-hidden="true"></i>
-                  </button>
-                </div>
+                <span class="module-panel-title" id="module-panel-title">Filter by Modules</span>
+                <button class="module-clear-btn" id="module-clear-btn" type="button" style="visibility:hidden">Clear Filter</button>
+                <button class="module-panel-close" id="module-panel-close" type="button" aria-label="Close">
+                  <span><img src="src/distribute/close-small.svg" alt="" aria-hidden="true" /></span>
+                </button>
               </div>
               <ul class="module-checklist" id="module-checklist">
-                <li><label><input type="checkbox" value="contacts"><span class="mod-dot" style="background:#10b981"></span>Contacts</label></li>
-                <li><label><input type="checkbox" value="accounts"><span class="mod-dot" style="background:#8b5cf6"></span>Accounts</label></li>
-                <li><label><input type="checkbox" value="deals"><span class="mod-dot" style="background:#f59e0b"></span>Deals</label></li>
-                <li><label><input type="checkbox" value="leads"><span class="mod-dot" style="background:#3b82f6"></span>Leads</label></li>
+                <li><label><input type="checkbox" value="contacts"><span class="ms-dot"><span class="mod-dot" style="background:#10b981"></span></span><span class="ms-opt">Contacts</span></label></li>
+                <li><label><input type="checkbox" value="accounts"><span class="ms-dot"><span class="mod-dot" style="background:#8b5cf6"></span></span><span class="ms-opt">Accounts</span></label></li>
+                <li><label><input type="checkbox" value="deals"><span class="ms-dot"><span class="mod-dot" style="background:#f59e0b"></span></span><span class="ms-opt">Deals</span></label></li>
+                <li><label><input type="checkbox" value="leads"><span class="ms-dot"><span class="mod-dot" style="background:#3b82f6"></span></span><span class="ms-opt">Leads</span></label></li>
+                <li><label><input type="checkbox" value="vendors"><span class="ms-dot"><span class="mod-dot" style="background:#ec4899"></span></span><span class="ms-opt">Vendors</span></label></li>
+                <li><label><input type="checkbox" value="order-approval"><span class="ms-dot"><span class="mod-dot" style="background:#14b8a6"></span></span><span class="ms-opt">Order Approval</span></label></li>
+                <li><label><input type="checkbox" value="new-installation"><span class="ms-dot"><span class="mod-dot" style="background:#eab308"></span></span><span class="ms-opt">New Installation</span></label></li>
+                <li><label><input type="checkbox" value="quotes"><span class="ms-dot"><span class="mod-dot" style="background:#6366f1"></span></span><span class="ms-opt">Quotes</span></label></li>
+                <li><label><input type="checkbox" value="invoices"><span class="ms-dot"><span class="mod-dot" style="background:#f97316"></span></span><span class="ms-opt">Invoices</span></label></li>
               </ul>
             </div>
           </div>

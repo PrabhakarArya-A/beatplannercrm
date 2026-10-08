@@ -261,7 +261,7 @@ body {
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
-  height: 42px;
+  height: 50px;   /* Figma: the 34px dropdown 8px from top and bottom */
 }
 
 .warn-badge {
@@ -291,162 +291,213 @@ body {
   font-size: 15px;
 }
 
-.module-select {
-  position: relative;
+/* ── Module filter (Figma 1342:71323 closed, 1342:72617 open) ── */
+.module-select { position: relative; }
+
+/* Dropdown: 34px, 3px lead-in, label at 10px either side, filled caret.
+   It hugs its label and stops at 220px — see renderModuleNames() */
+.ms-trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  color: #374151;
-  cursor: pointer;
+  max-width: 220px;
+  height: 34px;
+  padding: 0;
   background: #fff;
-  user-select: none;
+  border: 1px solid #c0c8e2;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #313949;
+  cursor: pointer;
 }
 
-.module-select:hover {
-  background: #f9fafb;
+/* sits under the left stroke, as Figma's inside stroke lets it */
+.ms-strip { display: block; flex-shrink: 0; width: 3px; height: 32px; margin-left: -1px; }
+
+.ms-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 10px;
+  line-height: normal;
+  white-space: nowrap;
 }
 
-.module-select i {
-  font-size: 12px;
-  transition: transform 0.2s;
+.ms-names { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* "& n More" — Zoho Puvi Medium */
+.ms-more  { flex-shrink: 0; margin-left: 4px; font-weight: 500; }
+
+.ms-caret { display: flex; flex-shrink: 0; padding-right: 10px; }
+.ms-caret img { display: block; width: 10px; height: 5px; transition: transform 0.15s; }
+
+/* Open — Component/Input/Focus-Outline and the Input-Dropdown focus glow */
+.module-select.open .ms-trigger,
+.ms-trigger:focus-visible {
+  outline: none;
+  border-color: #5464f2;
+  box-shadow: 0 0 6px rgba(76, 94, 253, 0.5);
 }
 
-.module-select.open i {
-  transform: rotate(180deg);
+.module-select.open .ms-caret img { transform: rotate(180deg); }
+
+/* Tooltip, white (Figma 5877:1037925): a plain list of the picked
+   modules, 3px up over the dropdown's bottom edge and 86px in, fixed */
+.ms-tip {
+  position: absolute;
+  top: calc(100% - 3px);
+  left: 86px;
+  z-index: 60;
+  padding: 5px 9px;   /* Figma 6 / 10, less the inside stroke */
+  background: #fff;
+  border: 1px solid #d6d6e3;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
-.module-select.active-filter {
-  border-color: #7c3aed;
-  color: #7c3aed;
+.ms-tip[hidden] { display: none; }
+
+.ms-tip ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 22px;
+  color: #313949;
+  white-space: nowrap;
 }
 
-/* ── Module Multi-Select Panel ── */
+/* ── Panel — "Filter - 2.0 list", 320px ── */
 .module-panel {
   display: none;
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% - 1px);
   left: 0;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.13);
-  min-width: 240px;
   z-index: 50;
-  padding: 16px 16px 12px;
+  width: 320px;
+  padding: 14px;   /* Figma 15, less the inside stroke */
+  background: #fff;
+  border: 1px solid #dcdbee;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.module-select.open .module-panel {
-  display: block;
-}
+.module-select.open .module-panel { display: block; }
 
 .module-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 15px;
+  height: 27px;
+  margin-bottom: 20px;
 }
 
 .module-panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.module-panel-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.module-clear-btn {
-  background: none;
-  border: none;
-  font-size: 12px;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-}
-
-.module-clear-btn:hover { color: #111827; }
-
-.module-panel-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #9ca3af;
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
-  padding: 0;
-  display: flex;
-  align-items: center;
+  font-weight: 600;
+  line-height: normal;
+  color: #202123;
 }
 
-.module-panel-close:hover { color: #374151; }
+/* Secondary Link */
+.module-clear-btn {
+  height: 27px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #313949;
+  cursor: pointer;
+}
+
+.module-clear-btn:hover { background: #f2f5fe; }
+
+/* Close icon with Hover — 24px round, 8px close */
+.module-panel-close {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: #fff;
+  border: none;
+  border-radius: 200px;
+  cursor: pointer;
+}
+
+.module-panel-close:hover { background: #d9e1e9; }
+.module-panel-close span { position: relative; display: block; width: 8px; height: 8px; }
+.module-panel-close img { position: absolute; top: -0.75px; left: -0.75px; display: block; width: 9.5px; height: 9.5px; max-width: none; }
 
 .module-checklist {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
 }
 
+/* Option Comp: checkbox, module dot, name — 32px */
 .module-checklist li label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 6px;
-  border-radius: 6px;
+  height: 32px;
+  padding: 8px 10px 8px 6px;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 16px;
+  color: #313949;
   cursor: pointer;
-  font-size: 13px;
-  color: #374151;
   user-select: none;
 }
 
-.module-checklist li label:hover {
-  background: #f9fafb;
-}
+.module-checklist li label:hover { background: #f2f5fe; }
 
 .module-checklist input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 17px;
-  height: 17px;
-  border: 1.5px solid #d1d5db;
-  border-radius: 4px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
   position: relative;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  background: #fff;
+  border: 2px solid #c0c8e2;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
 .module-checklist input[type="checkbox"]:checked {
-  background: #5b21b6;
-  border-color: #5b21b6;
+  background: #5464f2;
+  border-color: #5464f2;
 }
 
 .module-checklist input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 5px;
-  height: 9px;
-  border: 2px solid #fff;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 7px;
+  border: 1.5px solid #fff;
   border-top: none;
   border-left: none;
   transform: rotate(45deg);
 }
 
-.module-checklist .mod-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.module-checklist input[type="checkbox"]:focus-visible { outline: 2px solid rgba(84, 100, 242, 0.4); outline-offset: 1px; }
+
+/* 16px icon slot, the module's colour dot centred in it, then 8px */
+.ms-dot { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 16px; height: 16px; margin-right: 8px; }
+.ms-dot .mod-dot { width: 12px; height: 12px; }
+
+.ms-opt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Map Area ── */
 .map-area {
