@@ -409,13 +409,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  /* Types 1 and 2 are the comparison, so they keep starting the day on the
-     click, as they always did. The confirmation belongs to Type 3, with the
-     rest of what Type 3 is proposing. */
+  /* Type 2 asks before starting, with the same confirmation Type 3 uses
+     from the day row. Type 1 is the reference and still starts on the
+     click, as it always did. */
   dayAction.addEventListener('click', () => {
     const i = Number(dayAction.dataset.day);
-    if (dayAction.dataset.act === 'start') startDay(i);
-    else openEndDay(i);
+    if (dayAction.dataset.act !== 'start') openEndDay(i);
+    else if (layout === '2') openStartDay(i);
+    else startDay(i);
   });
 
   /* Distance is read off the legs: what was actually driven where we have

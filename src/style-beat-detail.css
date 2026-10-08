@@ -650,23 +650,37 @@ select.bd-input:has(option[value=""]:checked) { color: #7c8bae; }
 }
 
 /* ── Type 1 ──────────────────────────────────────────── */
+/* Beat Details across the top; under it Visits and the map, bound into
+   one card — the day list on the left drives the route on the right */
 .bp-content.type-1 {
   grid-template-columns: 455px minmax(0, 1fr);
   grid-template-areas:
-    "details map"
+    "details details"
     "visits  map";
-  column-gap: 16px;
-  row-gap: 0;
+  column-gap: 0;
+  row-gap: 16px;
 }
 
-/* The pair reads as one card: no gap, and only the outer corners round */
-.type-1 .bd-card-details {
-  border-radius: 10px 10px 0 0;
-  border-bottom: none;
-  padding-bottom: 0;
-}
+/* The pair reads as one card: no gap between them, one shared edge, and
+   only the outer corners round */
+.type-1 .bd-card-visits { border-radius: 10px 0 0 10px; }
+.type-1 .bd-card-map    { border-radius: 0 10px 10px 0; border-left: none; }
 
-.type-1 .bd-card-visits { border-radius: 0 0 10px 10px; }
+/* No headings over the pair — the day cards say what the list is, and the
+   map says what it is. The list is set in 10px, as Type 2's is, and the
+   map runs to the card's edges; the card's own corners clip it. */
+.type-1 .bp-visits-title,
+.type-1 .bp-routemap-header { display: none; }
+.type-1 .bd-card-visits { padding: 10px; }
+.type-1 .bp-routemap .map-area { border-radius: 0; }
+
+/* Full width now, so the three fields sit in one row; the card's own
+   padding closes it rather than the grid's bottom margin */
+.type-1 .bp-detail-grid {
+  grid-template-columns: repeat(3, max-content);
+  column-gap: 64px;
+  margin-bottom: 0;
+}
 
 /* ── Type 2 ──────────────────────────────────────────── */
 /* One column: the business card, then the related lists. A flex column
@@ -887,12 +901,9 @@ select.bd-input:has(option[value=""]:checked) { color: #7c8bae; }
     grid-template-rows: auto minmax(320px, 1fr);
   }
   .type-2 .bd-card-visits { max-height: 640px; }
-  .type-1 .bd-card-details {
-    border-radius: 10px;
-    border-bottom: 1px solid var(--card-border);
-    padding-bottom: 18px;
-  }
   .type-1 .bd-card-visits { border-radius: 10px; }
+  .type-1 .bd-card-map    { border-radius: 10px; border-left: 1px solid var(--card-border); }
+  .type-1 .bp-detail-grid { grid-template-columns: 1fr 1fr; column-gap: 12px; }
 }
 
 /* ── The toggle ──────────────────────────────────────── */
