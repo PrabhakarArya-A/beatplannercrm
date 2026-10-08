@@ -157,12 +157,12 @@
         </label>
         <label class="mb-radio">
           <input type="radio" name="mb-scope" value="specific" ${specific ? 'checked' : ''}>
-          Records matching criteria
+          Specific records
         </label>
       </div>`;
     return `
       <section class="mb-section mb-scope">
-        <h3 class="mb-group-head">Record Scope</h3>
+        <h3 class="mb-group-head">Which records</h3>
         ${radios}
         ${specific ? `
           <div class="mb-criteria">
@@ -339,21 +339,25 @@
     errors.clearAll();
     const q = sel => bodyEl.querySelector(sel);
 
-    if (!draft.module) errors.set(q('.mb-module'), MESSAGES.empty);
+    if (!draft.module) errors.set(q('.mb-module'), MESSAGES.module);
 
     if (draft.module) {
       ADDRESS_PARTS[draft.addressType].forEach(part => {
         if (!part.required) return;
         const field = q(`.mb-map[data-part="${part.key}"]`);
-        if (field && !field.value) errors.set(field, MESSAGES.empty);
+        if (!field || field.value) return;
+        const message = draft.addressType === 'unstructured'
+          ? MESSAGES.fullAddress
+          : `Select a field for ${part.label}.`;
+        errors.set(field, message);
       });
 
       if (draft.scope === 'specific') {
         bodyEl.querySelectorAll('.pc-crit-row').forEach(row => {
           const c = draft.criteria[Number(row.dataset.i)];
-          if (!c.field) errors.set(row.querySelector('.pc-crit-attr'), MESSAGES.empty);
+          if (!c.field) errors.set(row.querySelector('.pc-crit-attr'), MESSAGES.criteria);
           if (!VALUELESS.has(c.op) && !c.value.trim()) {
-            errors.set(row.querySelector('.pc-crit-val'), MESSAGES.empty);
+            errors.set(row.querySelector('.pc-crit-val'), MESSAGES.criteria);
           }
         });
       }
@@ -376,7 +380,7 @@
     if (editing) api.update(editingIndex, row); else api.add(row);
     const name = draft.module;
     close();
-    toast(`${name} ${editing ? 'updated' : 'added'}.`);
+    toast(`${name} module ${editing ? 'updated' : 'added'}.`);
   });
 
   document.getElementById('mb-cancel').addEventListener('click', close);

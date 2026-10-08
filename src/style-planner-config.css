@@ -233,6 +233,18 @@
 
 .pc-overlay.show { display: flex; animation: pc-overlay-in 0.16s ease-out; }
 
+/* Short confirmation. Reuses the module dialog's header, body, and footer. */
+.pc-confirm {
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  margin-top: 12vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--pc-card);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
 /* The dialog drops in from above rather than appearing in place */
 @keyframes pc-overlay-in {
   from { opacity: 0; }

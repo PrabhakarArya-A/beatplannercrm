@@ -37,7 +37,7 @@ const CB_RECORDS = (() => {
   const MODULES = [
     { module: 'Leads',    count: 100, name: person },
     { module: 'Contacts', count: 50,  name: person },
-    { module: 'Deals',    count: 25,  name: () => `${pick(DEAL)} — ${company()}` },
+    { module: 'Deals',    count: 25,  name: () => `${pick(DEAL)} - ${company()}` },
     { module: 'Vendors',  count: 200, name: company },
   ];
 
